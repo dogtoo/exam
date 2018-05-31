@@ -1,0 +1,8 @@
+Subject:教案退回編輯通知 [狀態:${QsStatDesc}]
+${QsAdminName} 先生/小姐，
+
+您好，教案 ${QsName} 代碼 ${QsId}，未通過審核，已退回編輯
+
+未通過原因：${QsReason}
+
+此通知由系統自動寄發，請勿回覆，謝謝！

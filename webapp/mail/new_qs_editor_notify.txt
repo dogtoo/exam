@@ -1,0 +1,7 @@
+Subject:新教案編輯人員通知
+${QsEditorName} 先生/小姐，
+
+您好，由 ${QsAdminName} 新建立教案 ${QsName} 代碼 ${QsId}，邀請您為本教案的編輯人員
+
+此通知由系統自動寄發，請勿回覆，謝謝！
+ 

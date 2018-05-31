@@ -1,0 +1,48 @@
+<?xml version='1.0' encoding='utf-8'?>
+<Context>
+	<Resource name="jdbc/exam" 
+	    auth="Container"
+	    type="javax.sql.DataSource"
+	    driverClassName="org.postgresql.Driver"
+	    url="jdbc:postgresql://114.32.232.150:2332/exam_dev"
+	    username="exam"
+	    password="exam123"
+	    logAbandoned="true"
+	    maxActive="10"
+	    maxIdle="3"
+	    maxWait="1000"
+	    poolPreparedStatements="true"
+	    removeAbandoned="true"
+	    removeAbandonedTimeout="60"
+	    testOnBorrow="true"
+	    validationQuery="SELECT 1"/>
+
+    <Environment name="conf/operationLog_path"
+        value="/home/bernie/ron/operLog/"
+        type="java.lang.String" override="false"/>
+
+    <Environment name="conf/upload_path"
+        value="/home/bernie/ron/uploadZone/"
+        type="java.lang.String" override="false"/>
+
+    <Environment name="conf/question_template_file_path"
+        value="/home/bernie/ron/qstmp_file/"
+        type="java.lang.String" override="false"/>
+
+    <Environment name="conf/question_file_path"
+        value="/home/bernie/ron/qs_file/"
+        type="java.lang.String" override="false"/>
+
+    <Environment name="conf/mail_template_path"
+        value="/home/bernie/ron/workspace/examn/src/main/webapp/mail/"
+        type="java.lang.String" override="false"/>
+
+    <Environment name="conf/mail_smtp_host"
+        value="mail.acol.com.tw[tls]/ron-exam@acol.com.tw/ron123456"
+        type="java.lang.String" override="false"/>
+
+    <Environment name="conf/title_append"
+        value="（測試系統）"
+        type="java.lang.String" override="false"/>
+</Context>
+ 

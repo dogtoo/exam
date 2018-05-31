@@ -1,0 +1,188 @@
+
+body {
+	font-size: 14px;
+	line-height: 14px;
+	color: #404040;
+	background-color: #f2f2f2;
+}
+
+table.cond td {
+	text-align: center;
+}
+
+table.listHead {
+	border-collapse: collapse;
+}
+
+table.listHead td {
+	padding: 0;
+}
+
+table.listHead span.orderField {
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+table.listData {
+	border-collapse: collapse;
+}
+
+table.listData td {
+	padding: 0;
+}
+
+table.listData tr.odd {
+	height: 24px;
+	background-color: #d0d0f0;
+}
+
+table.listData tr.even {
+	height: 24px;
+	background-color: #d0f0d0;
+}
+
+table.listData tr.odd:hover {
+	background-color: #f0f0d0;
+}
+
+table.listData tr.even:hover {
+	background-color: #f0f0d0;
+}
+
+table.listData tr.select {
+	background-color: #802020;
+	color: #ffffff;
+}
+
+table.listData tr.select:hover {
+	background-color: #606000;
+	color: #ffffff;
+}
+
+table.listData tr.select button {
+	background-color: #606060;
+}
+
+table.listData input[type='text'] {
+	height: 24px;
+	border: 0 none black; 
+	padding: 0;
+	background-color: inherit;
+	font-size: inherit;
+	color: inherit;
+	line-height: inherit;
+	vertical-align: middle;
+}
+
+table.listHead td.headCol1 {
+	background-color: #606060;
+	color: #ffffff;
+	height: 24px;
+	line-height: 14px;
+	vertical-align: middle;
+	text-align: center;
+}
+
+table.listHead td.headCol2 {
+	background-color: #707070;
+	color: #ffffff;
+	height: 24px;
+	line-height: 14px;
+	vertical-align: middle;
+	text-align: center;
+}
+
+table.listHead td.headCol3 {
+	background-color: #808080;
+	color: #ffffff;
+	height: 24px;
+	line-height: 14px;
+	vertical-align: middle;
+	text-align: center;
+}
+
+table.listHead td.headCol4 {
+	background-color: #909090;
+	color: #ffffff;
+	height: 24px;
+	line-height: 14px;
+	vertical-align: middle;
+	text-align: center;
+}
+
+table.listHead td.headCol5 {
+	background-color: #a0a0a0;
+	color: #ffffff;
+	height: 24px;
+	line-height: 14px;
+	vertical-align: middle;
+	text-align: center;
+}
+
+table.listHead td.headCol6 {
+	background-color: #b0b0b0;
+	color: #ffffff;
+	height: 24px;
+	line-height: 14px;
+	vertical-align: middle;
+	text-align: center;
+}
+
+table.listHead td.headCol7 {
+	background-color: #c0c0c0;
+	color: #ffffff;
+	height: 24px;
+	line-height: 14px;
+	vertical-align: middle;
+	text-align: center;
+}
+
+span.textbox:not(.combo) input.validatebox-readonly {
+	background-color: #ffffd0;
+}
+
+span.textbox:not(.combo) textarea.validatebox-readonly {
+	background-color: #ffffd0;
+}
+
+span.textbox.textbox-readonly input.textbox-text {
+	background-color: #ffffd0;
+}
+
+button {
+	height: 24px;
+	color: inherit;
+	font-size: inherit;
+	line-height: inherit;
+	vertical-align: middle;
+}
+button[disabled] {
+	cursor: default;
+	color: #b0b0b0;
+}
+
+.panel-title {
+	font-size: 14px;
+}
+
+.tree-title {
+	font-size: inherit;
+}
+
+.datagrid-header td {
+	vertical-align: middle;
+}
+
+.datagrid-header .datagrid-cell span {
+	font-size: inherit;
+	color: inherit;
+}
+
+.datagrid-btable td {
+	vertical-align: middle;
+}
+
+.datagrid-cell {
+	font-size: 14px;
+	color: #404040;
+}
