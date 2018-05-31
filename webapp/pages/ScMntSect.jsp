@@ -211,10 +211,10 @@ function editRdRoom(){
                 <button type="button" style="width: 100px;" onclick="qryRddList()">查詢梯次</button>
             </td>
             <td rowspan="2">
-                <button type="button" style="width: 100px;" onclick="checkRdRoom()">考試表確認</button>
+                <button type="button" style="width: 100px;" ${rddmCrHide} onclick="checkRdRoom()">考試表確認</button>
             </td>
             <td rowspan="2">
-                <button type="button" style="width: 100px;" onclick="editRdRoom()">調整考場</button>
+                <button type="button" style="width: 100px;" ${rddmEditHide} onclick="editRdRoom()">調整考場</button>
             </td>
             <td rowspan="2">
                 <button type="button" style="width: 100px;" onclick="backProgId('${bProgId}')">返回</button>
