@@ -37,12 +37,12 @@ $(function(){
             {field:'rdDesc',title:'梯次說明',width:200},
             {field:'rdDate',title:'梯次日期',width:100, 
                 formatter:function(value,row,index){
-					return row.rdDate.substr(0,4) + '/' + row.rdDate.substr(5,2) + '/' + row.rdDate.substr(-2);                    
+                    return row.rdDate.substr(0,4) + '/' + row.rdDate.substr(5,2) + '/' + row.rdDate.substr(-2);                    
                 }
             },
             {field:'begTime',title:'開始時間',width:100, 
                 formatter:function(value,row,index){
-					return row.begTime.substr(0,2) + ':' + row.begTime.substr(-2);                    
+                    return row.begTime.substr(0,2) + ':' + row.begTime.substr(-2);                    
                 }
             },
             {field:'qsCount',title:'試題數量',width:100},
@@ -52,34 +52,50 @@ $(function(){
             {field:'stsS',hidden:true},
             {field:'stsE',hidden:true},
             {field:'rdStatusDesc',title:'梯次狀態',width:150,
-            	formatter:function(value,row,index){
-            	    //尚未建立考站
-            	    var R = '';
-            	    var S = '';
-            	    var E = '';
-            	    var CE = '';
-            	    if (row.stsR != 'Y')
-            	        R = '尚未建立考站';
-            	    //尚未建立節次及考生 
-            	    else if (row.stsS != 'Y')
-            	    	S = '尚未建立節次及考生';
-            	    //都建完後顯示「產生考試梯次表
-            	    else if (row.stsE != 'Y') {
-            			E = '<button class="easyui-linkbutton" onclick="parent.selProg(\'ScMntSect?rdId='+ row.rdId ;
-            			var i = 0
-            			$.each(queryTmplData, function(f,v){
-            			    E += "&p_b_ScRunDown["+ (i++) +"]=" + f + ":" + v;
-            			});
-            			E += "&p_b_progId[0]=ScRunDown"
-            		    E += '\');">產生考試梯次表 </button>';
-            	    }
-            		//考試梯次表已建
-            		else if (row.stsE == 'Y')
-            		    CE = '考試梯次表已建';
-            		//考試中
-            		//考試已結束 顯示空白
-            		return R + S + E + CE;
-            	}
+                formatter:function(value,row,index){
+                    //尚未建立考站
+                    var R = '';
+                    var S = '';
+                    var E1 = '';
+                    var E = '';
+                    var ING = '';
+                    var rdDate = row.rdDate.substr(0,4) + '/' + row.rdDate.substr(5,2) + '/' + row.rdDate.substr(-2);
+                    var parseRdDate = Date.parse(rdDate);
+                    if (row.stsR != 'Y')
+                        R = ' 考站';
+                    //尚未建立節次及考生 
+                    if (row.stsS != 'Y')
+                        S = ' 節次';
+                    if (row.stsE != 'S')
+                        E1 = ' 考生';
+                    
+                  	//考試中
+                  	if (row.stsE == 'Y' && parseRdDate == new Date() )
+                        ING = '考試中';
+                    //都建完後顯示「產生考試梯次表
+                    else if (row.stsR == 'Y' && row.stsS == 'Y' && (row.stsE != '' && row.stsE != 'N')) {
+                        E = '<button class="easyui-linkbutton" onclick="parent.selProg(\'ScMntSect?rdId='+ row.rdId ;
+                        var i = 0
+                        $.each(queryTmplData, function(f,v){
+                            E += "&p_b_ScRunDown["+ (i++) +"]=" + f + ":" + v;
+                        });
+                        E += "&p_b_progId[0]=ScRunDown"
+                        if (row.stsE == 'S')
+                            E += '\');">產生考試梯次表 </button>';
+                    //考試梯次表已建
+                        else if (row.stsE == 'Y')
+                            E += '\');">查詢考試梯次表 </button>';    
+                    }
+                    
+                    //考試已結束 顯示空白
+                    //已過期
+                    if (parseRdDate < new Date())
+                        return '';
+                    else if (R != '' || S != '' || E1 != '')
+                        return '尚未建立' + R + S + E1;
+                    else
+                        return ING + E;
+                }
             },
             {field:'rdStatus',hidden:true},
             {field:'rdProcess',title:'梯次處理',width:150
@@ -101,17 +117,14 @@ $(function(){
                         return AR + AS + AE;
                     //} 
                 }
-            	
+                
             }
         ]]
     });
     
-    //copyRow = $("#rdEditTable").find("tr.modPane.copy");
-    //newRdId = $("#rdEditTable").find("tr.modPane.rdId");
-    /*
-    var td = $("#rdmmList").datagrid('getPanel').find('div.datagrid-header td[field="rdId"]');
-    td.addClass('headCol1');
-    */
+    var opts = $("#rdmmList").datagrid('options');
+    opts.url = 'ScRunDown_qryRd';
+    opts.method = 'POST';
 });
 
 //點選datagrid時取得row的index
@@ -126,7 +139,30 @@ function qryRdList() {
     data.rdDesc = $("#rdDesc").textbox('getText');
     data.rdDateS = $("#rdDateS").textbox('getText');
     data.rdDateE = $("#rdDateE").textbox('getText');
-    queryTmplData = data;
+    $("#rdmmList").datagrid('options').queryParams = data;
+    $("#rdmmList").datagrid({
+        loader: function(param, success, error){
+            queryTmplData = param;//這邊才有page的筆數
+            var opts = $(this).datagrid('options');
+            if (!opts.url) return false;
+            $.ajax({
+                type: opts.method,
+                url: opts.url,
+                data: param,
+                dataType: 'json',
+                success: function(res){
+                    parent.showStatus(res);
+                    if (res.success){
+                        success(res.rdmmList);             
+                    } else {
+                        error([]);
+                    }
+                }
+            });
+        }
+
+    });
+    /*
     $.ajax({
         url: 'ScRunDown_qryRd',
         type: 'POST',
@@ -141,7 +177,7 @@ function qryRdList() {
                 $("#rdmmList").datagrid('loadData',[]);
             }
         }
-    });
+    });*/  
 }
 
 function editRd(editType, target) {
@@ -152,20 +188,22 @@ function editRd(editType, target) {
     $("#pRdId").textbox({'readonly':true});
     $("#pNewRdId").textbox({'readonly':true});
     if (editType == 'U' || editType == 'C') {
-	    $("#pRdId").textbox('setText', row.rdId);
-	    $("#pRdDesc").textbox('setText', row.rdDesc);
-	    $("#pRdDate").datebox('setValue', row.rdDate);
-	    $("#pBegTime").timespinner('setValue', row.begTime);
-	    $("#pReadTime").textbox('setText', row.readTime);
-	    $("#pExamTime").textbox('setText', row.examTime);
+        $("#pRdId").textbox('setText', row.rdId);
+        $("#pRdDesc").textbox('setText', row.rdDesc);
+        $("#pRdDate").datebox('setValue', row.rdDate);
+        $("#pBegTime").timespinner('setValue', row.begTime);
+        $("#pQsCount").textbox('setValue', row.qsCount);
+        $("#pReadTime").textbox('setText', row.readTime);
+        $("#pExamTime").textbox('setText', row.examTime);
     }
     else if (editType == 'A') {
         $("#pRdId").textbox('setText', '');
-	    $("#pRdDesc").textbox('setText', '');
-	    $("#pRdDate").datebox('setValue', '');
-	    $("#pBegTime").timespinner('setValue', '');
-	    $("#pReadTime").textbox('setText', '');
-	    $("#pExamTime").textbox('setText', '');
+        $("#pRdDesc").textbox('setText', '');
+        $("#pRdDate").datebox('setValue', '');
+        $("#pBegTime").timespinner('setValue', '');
+        $("#pQsCount").textbox('setValue', '');
+        $("#pReadTime").textbox('setText', '');
+        $("#pExamTime").textbox('setText', '');
     }
     
     //$("#rdEditTable").find(".copy").remove();
@@ -211,11 +249,12 @@ function rdEditDone(editType, target) {
         'pRdDesc': $("#pRdDesc").textbox('getText'),
         'pRdDate': $("#pRdDate").textbox('getText'),
         'pBegTime': $("#pBegTime").textbox('getText'),
+        'pQsCount': $("#pQsCount").textbox('getText'),
         'pReadTime': $("#pReadTime").textbox('getText'),
         'pExamTime': $("#pExamTime").textbox('getText'),
         'editType': editType
     };
-    $.extend(data, queryTmplData);
+    //$.extend(data, queryTmplData);
     
     if (editType == 'D' && target) {
         var row = $("#rdmmList").datagrid('getRows')[getRowIndex(target)];
@@ -224,21 +263,21 @@ function rdEditDone(editType, target) {
     else {
         data['pNewRdId']     = $("#pNewRdId").textbox('getText');
         data['copyQs']       = $("#pCopyQs").prop("checked");
-	    data['copyExaminer'] = $("#pCopyExaminer").prop("checked");
-	    data['copyPatient']  = $("#pCopyPatient").prop("checked");
-	    data['copySect']     = $("#pCopySect").prop("checked");
+        data['copyExaminer'] = $("#pCopyExaminer").prop("checked");
+        data['copyPatient']  = $("#pCopyPatient").prop("checked");
+        data['copySect']     = $("#pCopySect").prop("checked");
     }        
 
     if (editType == 'D') {
         $.messager.confirm({
-    		title: '確認',
-    		msg: '是否要刪除此樣板？',
-    		ok: '刪除',
-    		cancel: '取消',
-    		fn: function (ok) {
-    		    if (ok)
-    		        rdEditAjaxDone(data);   
-    		}
+            title: '確認',
+            msg: '是否要刪除此樣板？',
+            ok: '刪除',
+            cancel: '取消',
+            fn: function (ok) {
+                if (ok)
+                    rdEditAjaxDone(data);   
+            }
         });
     }
     else
@@ -256,7 +295,7 @@ function rdEditAjaxDone(data) {
         success: function(res) {
             parent.showStatus(res);
             if (res.success) {
-                $("#rdmmList").datagrid('loadData',res.rdmmList);
+                $("#rdmmList").datagrid('reload',queryTmplData);
                 $("#pNewRdId").textbox('setText', res.pNewRdId);
                 
             }
@@ -267,11 +306,11 @@ function rdEditAjaxDone(data) {
 
 //編輯考站
 function rdRoomEditRow(target){
-	var index;
-	if (typeof(target) == 'number')
-		index = target;
-	else
-	    index = getRowIndex(target);
+    var index;
+    if (typeof(target) == 'number')
+        index = target;
+    else
+        index = getRowIndex(target);
     $('#rdRoom').datagrid('beginEdit', index);
     var edRow = $("#rdRoom").datagrid('getEditors', index);
     var row = $("#rdRoom").datagrid('getRows')[index];
@@ -292,21 +331,21 @@ function rdRoomEditRow(target){
                     //var test = typeof(param);
                     data = {'param': param.q};
                     $.ajax({
-                    	url: 'ScRunDown_qryQsList',
+                        url: 'ScRunDown_qryQsList',
                         type: 'POST',
                         data: data,
                         dataType: 'json',
                         success: function(res) {
-                        	if (res.success) {
-	                            success(res.qsList);
-	                            var ed = befCommBoxText['qsEd'];
-	                            if ((!param.q || param.q.length < 0) && !ed.first) {
-	                                $(ed.target).combobox('setText', befCommBoxText['qsName']);
-	                                $(ed.target).combobox('setValue', befCommBoxText['qsId']);
-	                            }
-                        	}
-                        	else
-                        		return false;
+                            if (res.success) {
+                                success(res.qsList);
+                                var ed = befCommBoxText['qsEd'];
+                                if ((!param.q || param.q.length < 0) && !ed.first) {
+                                    $(ed.target).combobox('setText', befCommBoxText['qsName']);
+                                    $(ed.target).combobox('setValue', befCommBoxText['qsId']);
+                                }
+                            }
+                            else
+                                return false;
                         }
                     });
                 }
@@ -321,7 +360,7 @@ function rdRoomEditRow(target){
                 textField:'roomName',
                 mode: 'remote',
                 loader: function(param,success,error){
-                	data = {'param': param.q, 'rdId': rdId, 'rdDate': rdDate};
+                    data = {'param': param.q};
                     $.ajax({
                         url: 'ScRunDown_qryRoomList',
                         type: 'POST',
@@ -332,7 +371,7 @@ function rdRoomEditRow(target){
                                 success(res.roomList);
                                 var ed = befCommBoxText['roomEd'];
                                 if ((!param.q || param.q.length < 0) && !ed.first) {
-                                	$(ed.target).combobox('setText', befCommBoxText['roomName']);
+                                    $(ed.target).combobox('setText', befCommBoxText['roomName']);
                                     $(ed.target).combobox('setValue', befCommBoxText['roomId']);
                                 }
                             }
@@ -352,7 +391,7 @@ function rdRoomEditRow(target){
                 textField:'examinerName',
                 mode: 'remote',
                 loader: function(param,success,error){
-                	data = {'param': param.q, 'rdId': rdId, 'rdDate': rdDate, 'examiner': 'Y'};
+                    data = {'param': param.q, 'examiner': 'Y'};
                     $.ajax({
                         url: 'ScRunDown_qryUserList',
                         type: 'POST',
@@ -363,7 +402,7 @@ function rdRoomEditRow(target){
                                 success(res.userList);
                                 var ed = befCommBoxText['examinerEd'];
                                 if ((!param.q || param.q.length < 0) && !ed.first) {
-                                	$(ed.target).combobox('setText', befCommBoxText['examinerName']);
+                                    $(ed.target).combobox('setText', befCommBoxText['examinerName']);
                                     $(ed.target).combobox('setValue', befCommBoxText['examiner']);
                                 }
                             }
@@ -383,7 +422,7 @@ function rdRoomEditRow(target){
                 textField:'patientName',
                 mode: 'remote',
                 loader: function(param,success,error){
-                	data = {'param': param.q, 'rdId': rdId, 'rdDate': rdDate, 'examiner': 'N'};
+                    data = {'param': param.q, 'examiner': 'N'};
                     $.ajax({
                         url: 'ScRunDown_qryUserList',
                         type: 'POST',
@@ -394,7 +433,7 @@ function rdRoomEditRow(target){
                                 success(res.userList);
                                 var ed = befCommBoxText['patient1Ed'];
                                 if ((!param.q || param.q.length < 0) && !ed.first) {
-                                	$(ed.target).combobox('setText', befCommBoxText['patient1Name']);
+                                    $(ed.target).combobox('setText', befCommBoxText['patient1Name']);
                                     $(ed.target).combobox('setValue', befCommBoxText['patient1']);
                                 }
                             }
@@ -414,7 +453,7 @@ function rdRoomEditRow(target){
                 textField:'patientName',
                 mode: 'remote',
                 loader: function(param,success,error){
-                	data = {'param': param.q, 'rdId': rdId, 'rdDate': rdDate, 'examiner': 'N'};
+                    data = {'param': param.q, 'examiner': 'N'};
                     $.ajax({
                         url: 'ScRunDown_qryUserList',
                         type: 'POST',
@@ -422,7 +461,7 @@ function rdRoomEditRow(target){
                         dataType: 'json',
                         success: function(res) {
                             if (res.success) {
-                            	res.userList.unshift({'patientName': "　", 'patient': null})
+                                res.userList.unshift({'patientName': "　", 'patient': null})
                                 success(res.userList);
                                 var ed = befCommBoxText['patient2Ed'];
                                 if ((!param.q || param.q.length < 0) && !ed.first) {
@@ -446,7 +485,7 @@ function rdRoomEditRow(target){
                 textField:'patientName',
                 mode: 'remote',
                 loader: function(param,success,error){
-                	data = {'param': param.q, 'rdId': rdId, 'rdDate': rdDate, 'examiner': 'N'};
+                    data = {'param': param.q, 'examiner': 'N'};
                     $.ajax({
                         url: 'ScRunDown_qryUserList',
                         type: 'POST',
@@ -454,7 +493,7 @@ function rdRoomEditRow(target){
                         dataType: 'json',
                         success: function(res) {
                             if (res.success) {
-                            	res.userList.unshift({'patientName': "　", 'patient': null})
+                                res.userList.unshift({'patientName': "　", 'patient': null})
                                 success(res.userList);
                                 var ed = befCommBoxText['patient3Ed'];
                                 if ((!param.q || param.q.length < 0) && !ed.first) {
@@ -488,7 +527,7 @@ function rdRoomCancelRow(target){
 }
 //重排序號
 function reLoadRdRoomSeq() {
-	var pages = $('#rdRoom').datagrid('getRows');
+    var pages = $('#rdRoom').datagrid('getRows');
     for (var i=0; i<pages.length; i++) {
         $('#rdRoom').datagrid('updateRow', {
             index: i,
@@ -505,20 +544,20 @@ function rdRoomEditDone(editType) {
     var rdId = $("#rdRoomRdId").val();
     var rdDate = $("#rdRoomRdDate").val();
     var data = {"pRdId": rdId,
-	            "pRdDate": rdDate,
-	            "pRdrmList":JSON.stringify(rdRoomList)};
-    $.extend(data, queryTmplData);
+                "pRdDate": rdDate,
+                "pRdrmList":JSON.stringify(rdRoomList)};
+    //$.extend(data, queryTmplData);
     $.ajax({
         url: 'ScRunDown_editRdrm',
         type: 'POST',
         data: data,
         dataType: 'json',
         success: function(res) {
-        	parent.showStatus(res);
-        	if (res.success) {
-        		alert('處理' + res.cnt + '筆資料');
-        		$("#rdmmList").datagrid('loadData',res.rdmmList);
-        	}
+            parent.showStatus(res);
+            if (res.success) {
+                alert('處理' + res.cnt + '筆資料');
+                $("#rdmmList").datagrid('reload',queryTmplData);
+            }
         }
     });
 }
@@ -541,10 +580,10 @@ function editRdRoom(target) {
         data: {'rdId': row.rdId},
         dataType: 'json',
         success: function(res) {
-        	if (res.success)
+            if (res.success)
                 $('#rdRoom').datagrid('loadData',res.rdrmList);
-        	else
-        		$('#rdRoom').datagrid('loadData',[]);
+            else
+                $('#rdRoom').datagrid('loadData',[]);
         }
     });
     
@@ -568,18 +607,17 @@ function editRdRoom(target) {
             {field:'patient3Name',title:'標準病人3',width:80,editor:{type:'combobox'}},
             {field:'patient3',hidden:true},
             {field:'action',title:'處理',width:100,align:'center',
-				formatter:function(value,row,index){
-					if (row.editing){
-						var s = '<button class="easyui-linkbutton" onclick="rdRoomSaveRow(this)">儲存</a> ';
-						var c = '<button class="easyui-linkbutton" onclick="rdRoomCancelRow(this)">取消</a>';
-						return s+c;
-					} else {
-						var e = '<button class="easyui-linkbutton" onclick="rdRoomEditRow(this)">更新</a> ';
-						var d = '<button class="easyui-linkbutton" onclick="rdRoomDeleteRow(this)">刪除</a>';
-						return e+d;
-					}
-				}
-			}
+                formatter:function(value,row,index){
+                    if (row.editing){
+                        var s = '<button class="easyui-linkbutton" onclick="rdRoomSaveRow(this)">儲存</a> ';
+                        var c = '<button class="easyui-linkbutton" onclick="rdRoomCancelRow(this)">取消</a>';
+                        return s+c;
+                    } else {
+                        var e = '<button class="easyui-linkbutton" onclick="rdRoomEditRow(this)">更新</a> ';
+                        return e;
+                    }
+                }
+            }
         ]],
         onEndEdit:function(index,row){
             var edRow = $(this).datagrid('getEditors', index);
@@ -629,19 +667,19 @@ function editRdRoom(target) {
             reLoadRdRoomSeq();
         },
         onDrop:function(){
-        	reLoadRdRoomSeq();
+            reLoadRdRoomSeq();
         }
     });
 }
 //增加考站編輯row
 function addRdRoom() {
-	var pages = $("#rdRoom").datagrid('getRows');
-	for (var i=0; i<pages.length; i++) {
-		$('#rdRoom').datagrid('cancelEdit', i);		
-	}
-	
-	var row = $('#rdRoom').datagrid('getSelected');
-	var index;
+    var pages = $("#rdRoom").datagrid('getRows');
+    for (var i=0; i<pages.length; i++) {
+        $('#rdRoom').datagrid('cancelEdit', i);        
+    }
+    
+    var row = $('#rdRoom').datagrid('getSelected');
+    var index;
     if (row){
         index = $('#rdRoom').datagrid('getRowIndex', row) + 1;
     } else {
@@ -660,16 +698,16 @@ function addRdRoom() {
 //考試節次建檔
 //節次重排
 function reLoadRdSectSeq() {
-	var rows = $('#rdSect').datagrid('getRows');
-	var sectRdIdx = 0;
+    var rows = $('#rdSect').datagrid('getRows');
+    var sectRdIdx = 0;
     for (var i=0; i<rows.length; i++) {
-    	var row = rows[i];
-    	var sectSeq = 0;
-    	if (row.sectType == 'REA' || row.sectType == 'EXA') {
-    	    if (row.sectType == 'REA')
-    			sectRdIdx++;
-    		sectSeq = sectRdIdx;    		
-    	}    		
+        var row = rows[i];
+        var sectSeq = 0;
+        if (row.sectType == 'REA' || row.sectType == 'EXA') {
+            if (row.sectType == 'REA')
+                sectRdIdx++;
+            sectSeq = sectRdIdx;            
+        }            
         $('#rdSect').datagrid('updateRow', {
             index: i,
             row: {
@@ -680,15 +718,16 @@ function reLoadRdSectSeq() {
     }
 }
 
+//選擇節次類別時設定可輸入欄
 function rdSectInputField(sectType) {
     $("#btRdSectEdit").attr('disabled', 'disabled');
     $("#edSectType").textbox('setText' ,'');
     $("#edSectTime").numberbox('setValue',0);
     $("#edFileName").textbox('setText' ,'');
     $("#edRelaTime").numberbox('setValue',0);
-	$("#edSectType").textbox({'readonly':true});
+    $("#edSectType").textbox({'readonly':true});
     $("#edSectTime").textbox({'readonly':true});
-	$("#edFileName").textbox({'readonly':true});
+    $("#edFileName").textbox({'readonly':true});
     $("#edRelaTime").textbox({'readonly':true});
     
     if (sectType == 'RES' || sectType == 'SUS' 
@@ -703,14 +742,15 @@ function rdSectInputField(sectType) {
            $("#edFileName").textbox({'readonly':false});
        
        if (sectType == 'BET' || sectType == 'ENT' || sectType == 'MED')
-       	$("#edRelaTime").textbox({'readonly':false});          
+           $("#edRelaTime").textbox({'readonly':false});          
 }
 
+//新增節次類別
 function rdSectAddRow() {
     var row = $('#rdSect').datagrid('getSelected');
     
     var insRow = 1;
-	var index; 
+    var index; 
     if (row){
         if (row.sectType == 'REA')
             insRow++;
@@ -725,10 +765,11 @@ function rdSectAddRow() {
     $('#rdSect').datagrid('selectRow',index);
     
     rdSectInputField('xxxx');
-	$("#edSectType").textbox({'readonly':false});
+    $("#edSectType").textbox({'readonly':false});
     reLoadRdSectSeq();
 }
 
+//節次編輯確認
 function rdSectEditRow() {
     var row = $('#rdSect').datagrid('getSelected');
     if (row){
@@ -749,71 +790,69 @@ function rdSectEditRow() {
     reLoadRdSectSeq();
 }
 
+//節次刪除
 function rdSectDelRow(target) {
-	index = getRowIndex(target);
+    index = getRowIndex(target);
     if (!index){
         return;
     }
-	$('#rdSect').datagrid('deleteRow', index);
-	reLoadRdSectSeq();
+    $('#rdSect').datagrid('deleteRow', index);
+    reLoadRdSectSeq();
 }
 
-//節次建檔
+//節次儲存
 function rdSectEditDone() {
-	var rows = $("#rdSect").datagrid('getRows');
-	var rdId = $("#rdSectRdId").val();
-	var data = {"pRdId": rdId,
-			    "sectClean": $("#sectClean").prop("checked"),
-	            "pSectList":JSON.stringify(rows)};
-	$.extend(data, queryTmplData);
-	$.ajax({
-	    url: 'ScRunDown_editSect',
-	    type: 'POST',
-	    data: data,
-	    dataType: 'json',
-	    success: function(res) {
-	        parent.showStatus(res);
-	        if (res.success) {
-	            alert('處理' + res.cnt + '筆資料');
-	            if ($("#sectClean").prop("checked"))
-	            	$("#rdSect").datagrid('loadData', []);
-            	$("#rdmmList").datagrid('loadData',res.rdmmList);
-	        }
-	    }
-	});
+    var rows = $("#rdSect").datagrid('getRows');
+    var rdId = $("#rdSectRdId").val();
+    var data = {"pRdId": rdId,
+                "pSectList":JSON.stringify(rows)};
+    //$.extend(data, queryTmplData);
+    $.ajax({
+        url: 'ScRunDown_editSect',
+        type: 'POST',
+        data: data,
+        dataType: 'json',
+        success: function(res) {
+            parent.showStatus(res);
+            if (res.success) {
+                alert('處理' + res.cnt + '筆資料');
+                $("#rdmmList").datagrid('reload',queryTmplData);
+            }
+        }
+    });
 
-	/*
-	var save = 0;
-	var tsCnt = 0;
-	var ddmData = [];
-	for (var i=0; i<rows.length; i++) {
-		var httpMethod = 'POST';
-		var row = rows[i];
-		var id = '';
-		if (row.id != null && row.id != '') {
-			id = '/' + row.id;
-			httpMethod = 'PUT';
-		}
-			 
-		delete row['_selected'];
-		row.rdId = $("#rdSectRdId").val(); 
-		$.ajax({
-	        url: 'http://localhost:80/SCRDSM' + id,
-	        type: httpMethod,
-	        data: JSON.stringify(row),
-	        headers: {
-	            'x-auth-token': localStorage.accessToken,
-	            "Content-Type": "application/json"
-	        },
-	        dataType: 'json',
-	        success: function(data) {
-	        	save = save + 1;
-	        	
-	        }
-	    });
-	}
-	alert('處理'+ ddmData.length + '筆資料。');
-	*/
+    /*
+    var save = 0;
+    var tsCnt = 0;
+    var ddmData = [];
+    for (var i=0; i<rows.length; i++) {
+        var httpMethod = 'POST';
+        var row = rows[i];
+        var id = '';
+        if (row.id != null && row.id != '') {
+            id = '/' + row.id;
+            httpMethod = 'PUT';
+        }
+             
+        delete row['_selected'];
+        row.rdId = $("#rdSectRdId").val(); 
+        $.ajax({
+            url: 'http://localhost:80/SCRDSM' + id,
+            type: httpMethod,
+            data: JSON.stringify(row),
+            headers: {
+                'x-auth-token': localStorage.accessToken,
+                "Content-Type": "application/json"
+            },
+            dataType: 'json',
+            success: function(data) {
+                save = save + 1;
+                
+            }
+        });
+    }
+    alert('處理'+ ddmData.length + '筆資料。');
+    */
 }
 
 //顯示主畫面
@@ -844,11 +883,11 @@ function editRdSect(target) {
             {field:'execTime',hidden:true},
             {field:'process',title:'處理',width:50, 
                 formatter:function(value,row,index){
-					if (row.sectSeq == 0){
-						var s = '<button class="easyui-linkbutton" onclick="rdSectDelRow(this)">刪除</a> ';
-					}
-						return s;
-				}
+                    if (row.sectSeq == 0){
+                        var s = '<button class="easyui-linkbutton" onclick="rdSectDelRow(this)">刪除</a> ';
+                    }
+                        return s;
+                }
             }
         ]],
         onLoadSuccess:function(){
@@ -873,6 +912,7 @@ function editRdSect(target) {
         data: {'rdId': row.rdId},
         dataType: 'json',
         success: function(res) {
+            parent.showStatus(res);
             if (res.success)
                 $('#rdSect').datagrid('loadData',res.sectList);
             else
@@ -881,13 +921,13 @@ function editRdSect(target) {
     });
     
     $("#edSectType").combobox({
-    	valueField:'value',
+        valueField:'value',
         textField:'text',
-    	url: 'ScRunDown_qrySectTypeList',
-    	method: 'get', 
-    	onSelect: function(rec) {
-    	    rdSectInputField(rec.value);
-    	}
+        url: 'ScRunDown_qrySectTypeList',
+        method: 'get', 
+        onSelect: function(rec) {
+            rdSectInputField(rec.value);
+        }
     })
 }
 //考試節次END
@@ -895,7 +935,7 @@ function editRdSect(target) {
 //考生建檔
 //節次重排
 function reLoadRdExamineeSeq() {
-	var pages = $('#rdExaminee').datagrid('getRows');
+    var pages = $('#rdExaminee').datagrid('getRows');
     for (var i=0; i<pages.length; i++) {
         $('#rdExaminee').datagrid('updateRow', {
             index: i,
@@ -912,7 +952,7 @@ function rdExamineeEditRow() {
     
     if (edExamineeName != '' && edExamineeName != null) {
         var row = $('#rdExaminee').datagrid('getSelected');
-    	var index;
+        var index;
         if (row){
             index = $('#rdExaminee').datagrid('getRowIndex', row);
         } else {
@@ -934,7 +974,7 @@ function rdExamineeEditRow() {
 
 /*
 function rdExamineeDelRow() {
-	var row = $('#rdExaminee').datagrid('getSelected');
+    var row = $('#rdExaminee').datagrid('getSelected');
     if (row){
         index = $('#rdExaminee').datagrid('getRowIndex', row);
     } else {
@@ -945,35 +985,24 @@ function rdExamineeDelRow() {
 }*/
 
 function rdExamineeEditDone(){
-	var rows = $("#rdExaminee").datagrid('getRows');
-    var save = 0;
-    
-    for (var i=0; i<rows.length; i++) {
-        var httpMethod = 'POST';
-        var row = rows[i];
-        var id = '';
-        if (row.id != null && row.id != '') {
-            id = '/' + row.id;
-            httpMethod = 'PUT';
-        }
-        
-        delete row['_selected'];
-        row.rdId = $("#rdExamineeRdId").val(); 
-        $.ajax({
-            url: 'http://localhost:80/SCRDDM' + id,
-            type: httpMethod,
-            data: JSON.stringify(row),
-            headers: {
-                'x-auth-token': localStorage.accessToken,
-                "Content-Type": "application/json"
-            },
-            dataType: 'json',
-            success: function(data) {
-                save = save + 1;
+    var rows = $("#rdExaminee").datagrid('getRows');
+    var rdId = $("#rdExamineeRdId").val();
+    var data = {"rdId": rdId,
+                "pExamineeList":JSON.stringify(rows)};
+     
+    $.ajax({
+        url: 'ScRunDown_editExaminee',
+        type: 'POST',
+        data: data,
+        dataType: 'json',
+        success: function(res) {
+            parent.showStatus(res);
+            if (res.success) {
+                alert('處理' + res.cnt + '筆資料');
+                $("#rdmmList").datagrid('reload',queryTmplData);
             }
-        });
-    }
-    alert('處理'+ save + '筆資料。');
+        }
+    });
 }
 
 function editRdExaminee(target) {
@@ -986,6 +1015,29 @@ function editRdExaminee(target) {
     
     $("#rdExamineeRdId").val(row.rdId); 
     
+    $("#edExaminee").combobox({
+        valueField:'examineeId',
+        textField:'examineeName',
+        mode: 'remote',
+        loader: function(param,success,error){
+            data = {'param': param.q, 'examiner': 'S'};
+            $.ajax({
+                url: 'ScRunDown_qryUserList',
+                type: 'POST',
+                data: data,
+                dataType: 'json',
+                success: function(res) {
+                    if (res.success) {
+                        success(res.userList);
+                    }
+                    else
+                        return false;
+                }
+            });
+        }
+    });
+
+    /*
     $("#edExaminee").combobox({
         valueField:'examineeId',
         textField:'examineeName',
@@ -1010,17 +1062,22 @@ function editRdExaminee(target) {
                 error: function() { return false; }
             });
         }
-    });
+    });*/
     
     $("#rdExaminee").datagrid({
         title:'首節次序',
         width:'250px',
         height:'350px',
         singleSelect:true,
-        url:'http://localhost:80/SCRDDM?rdId=' + row.rdId + '&_sort=roomSeq&order=DESC',
-        method:'GET',
+        url:'ScRunDown_qryExaminee',
+        method:'POST',
+        queryParams: {rdId:row.rdId},
+        loadFilter:function(res){
+            parent.showStatus(res);
+            return res.examineeList;
+        },
         columns:[[
-			{field:'roomSeq',title:'順序',width:80},
+            {field:'roomSeq',title:'順序',width:80},
             {field:'examineeName',title:'考生名稱',width:150},
             {field:'examinee',hidden:true}
         ]],
@@ -1032,8 +1089,8 @@ function editRdExaminee(target) {
             reLoadRdExamineeSeq();
         },
         onSelect:function(index, row) {
-        	$("#edExaminee").combobox('setText', row.examineeName);
-        	$("#edExaminee").combobox('setValue', row.examinee);
+            $("#edExaminee").combobox('setText', row.examineeName);
+            $("#edExaminee").combobox('setValue', row.examinee);
         }
     });
     
@@ -1092,8 +1149,8 @@ function editRdExaminee(target) {
                 </tr>
                 <tr class="modPane">
                     <td>
-                    	<labeal id="pNewRdIdL">新梯次代碼</labeal>
-                   	</td>
+                        <labeal id="pNewRdIdL">新梯次代碼</labeal>
+                       </td>
                     <td>
                         <input id="pNewRdId" type="text" style="width: 150px;"/>
                     </td>
@@ -1118,6 +1175,12 @@ function editRdExaminee(target) {
                     </td>
                 </tr>
                 <tr class="modPane">
+                    <td>試題數量</td>
+                    <td>
+                        <input id="pQsCount" class="easyui-numberbox" style="width: 90px;"/>
+                    </td>
+                </tr>
+                <tr class="modPane">
                     <td>每節讀題時間(分)</td>
                     <td>
                         <input id="pReadTime" class="easyui-numberbox" style="width: 90px;"/>
@@ -1130,15 +1193,15 @@ function editRdExaminee(target) {
                     </td>
                 </tr>
                 <tr class="modPane">
-                	<td><label id="pCopyL">複製選項</label></td>
-                	<td>
-                		<div id="pCopy">
-	                		<input id="pCopyQs" type="checkBox" checked/>教案
-	                		<input id="pCopyExaminer" type="checkBox" checked/>考官
-	                		<input id="pCopyPatient" type="checkBox" checked/>標準病人
-	                		<input id="pCopySect" type="checkBox" checked/>節次
-                		</div>
-                	</td>
+                    <td><label id="pCopyL">複製選項</label></td>
+                    <td>
+                        <div id="pCopy">
+                            <input id="pCopyQs" type="checkBox" checked/>教案
+                            <input id="pCopyExaminer" type="checkBox" checked/>考官
+                            <input id="pCopyPatient" type="checkBox" checked/>標準病人
+                            <input id="pCopySect" type="checkBox" checked/>節次
+                        </div>
+                    </td>
                 </tr>
                 <tr>
                     <td colspan="2" style="text-align: center;">
@@ -1157,11 +1220,13 @@ function editRdExaminee(target) {
     <input id="rdRoomRdDate" type="hidden" />
     <div style="float: left;">
         <table style="margin: 20px 0 0 10px;">
+            <!-- 
             <tr>
                 <td>
                     <button class="easyui-linkbutton" onclick="addRdRoom();">增加教案</button>
                 </td>
             </tr>
+             -->
             <tr>
                 <td>
                     <table id="rdRoom"></table>
@@ -1182,41 +1247,40 @@ function editRdExaminee(target) {
     <input id="rdSectRdId" type="hidden" />
     <div style="float: left;">
         <table style="margin: 10px 0 0 10px;">
-        	<tr>
-        		<td>
-        			
-        		</td>
-        		<td>
-	        		<table>
-	            		<tr>
-	            			<td>時間類別</td>
-	            			<td>長度</td>
-	            			<td>音效檔名</td>
-	            			<td>相對時間</td>
-	            		</tr>
-	            		<tr>
-	            			<td><input id="edSectType" class="easyui-combobox" style="width: 150px;"/></td>
-	            			<td><input id="edSectTime" class="easyui-numberbox" style="width: 80px;"/></td>
-	            			<td><input id="edFileName" class="easyui-textbox" style="width: 150px;"/></td>
-	            			<td><input id="edRelaTime" class="easyui-numberbox" style="width: 80px;"/></td>
-	            			<td><button id="btRdSectEdit" class="easyui-linkbutton" onclick="rdSectEditRow()">確認</button></td>
-	            		</tr>
-	            	</table>
-        		</td>
-        	</tr>
             <tr>
-            	<td valign="top">
-            		<button class="easyui-linkbutton" onclick="rdSectAddRow()">插入類別</button>
-            	</td>
+                <td>
+                    
+                </td>
+                <td>
+                    <table>
+                        <tr>
+                            <td>時間類別</td>
+                            <td>長度</td>
+                            <td>音效檔名</td>
+                            <td>相對時間</td>
+                        </tr>
+                        <tr>
+                            <td><input id="edSectType" class="easyui-combobox" style="width: 150px;"/></td>
+                            <td><input id="edSectTime" class="easyui-numberbox" style="width: 80px;"/></td>
+                            <td><input id="edFileName" class="easyui-textbox" style="width: 150px;"/></td>
+                            <td><input id="edRelaTime" class="easyui-numberbox" style="width: 80px;"/></td>
+                            <td><button id="btRdSectEdit" class="easyui-linkbutton" onclick="rdSectEditRow()">確認</button></td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr>
+                <td valign="top">
+                    <button class="easyui-linkbutton" onclick="rdSectAddRow()">插入類別</button>
+                </td>
                 <td>
                     <table id="rdSect"></table>
                 </td>
             </tr>
             <tr>
-            	<td></td>
+                <td></td>
                 <td>
                     <button class="easyui-linkbutton" onclick="rdSectEditDone();">儲存節次</button>
-                    <input id="sectClean" type="checkBox" />清除節次
                 </td>
             </tr>
         </table>
@@ -1239,15 +1303,15 @@ function editRdExaminee(target) {
                     </td>
                 </tr>
                 <tr>
-                	<td>
-                		<table id="rdExaminee"></table>
-                	</td>
+                    <td>
+                        <table id="rdExaminee"></table>
+                    </td>
                 </tr>
                 <tr>
-	                <td>
-	                    <button class="easyui-linkbutton" onclick="rdExamineeEditDone('E');">儲存</button>
-	                </td>
-	            </tr>
+                    <td>
+                        <button class="easyui-linkbutton" onclick="rdExamineeEditDone('E');">儲存</button>
+                    </td>
+                </tr>
             </table>
         </div>
     </div>

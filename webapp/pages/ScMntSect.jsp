@@ -45,7 +45,10 @@ $(function(){
     data.showType = $("#showType").combobox('getValue');
     
     paneBackup.ScMntSect = data;
-    
+    $("#rddmCr").hide();
+    $("#rddmEdit").hide();
+    $("#rddmCr").css("visibility", "");
+    $("#rddmEdit").css("visibility", "");
     /*
     var td = $("#rdmmList").datagrid('getPanel').find('div.datagrid-header td[field="rdId"]');
     td.addClass('headCol1');
@@ -124,9 +127,19 @@ function qryRddList() {
             	});
                 
                 $("#rddmList").datagrid('loadData',res.rddmList);
+                if (res.rddmEditHide == 'Y'){
+                    $("#rddmCr").hide();
+	                $("#rddmEdit").show();
+                }
+                else if (res.rddmCrHide) {
+                    $("#rddmCr").show();
+	                $("#rddmEdit").hide();
+                }
             }
             else {
                 $("#rddmList").datagrid('loadData',[]);
+                $("#rddmCr").hide();
+                $("#rddmEdit").hide();
             }
         }
     });
@@ -192,8 +205,29 @@ function qryRddList() {
 	*/
 }
 
-function checkRdRoom() {
-    
+function crRdRoom() {
+    //var data = $("#rddmList").datagrid('getRows');
+    var rdId = $("#rdId").textbox('getText');
+    var data = {"rdId":rdId, "editType":"Y"};
+    $.ajax({
+        url: 'ScRunDown_crRddm',
+        type: 'POST',
+        dataType: 'json',
+        data: data,
+        success: function(res) {
+            parent.showStatus(res);
+            if (res.success) {
+                if (res.rddmEditHide == 'Y'){
+                    $("#rddmCr").hide();
+	                $("#rddmEdit").show();
+                }
+                else if (res.rddmCrHide) {
+                    $("#rddmCr").show();
+	                $("#rddmEdit").hide();
+                }
+            }
+        }
+    });
 }
 
 function editRdRoom(){
@@ -209,12 +243,8 @@ function editRdRoom(){
             <td>顯示類別</td>
             <td rowspan="2">
                 <button type="button" style="width: 100px;" onclick="qryRddList()">查詢梯次</button>
-            </td>
-            <td rowspan="2">
-                <button type="button" style="width: 100px;" ${rddmCrHide} onclick="checkRdRoom()">考試表確認</button>
-            </td>
-            <td rowspan="2">
-                <button type="button" style="width: 100px;" ${rddmEditHide} onclick="editRdRoom()">調整考場</button>
+                <button type="button" id="rddmCr" style="width: 100px; visibility:hidden;" onclick="crRdRoom()">考試表確認</button>
+                <button type="button" id="rddmEdit" style="width: 100px; visibility:hidden;" onclick="editRdRoom()">調整考場</button>
             </td>
             <td rowspan="2">
                 <button type="button" style="width: 100px;" onclick="backProgId('${bProgId}')">返回</button>
