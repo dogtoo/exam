@@ -9,7 +9,7 @@
 <link rel="stylesheet" type="text/css" href="css/exam.css" />
 <script type="text/javascript" src="js/jquery-1.12.4.js"></script>
 <script type="text/javascript" src="js/jquery.easyui.min.js"></script>
-<script type="text/javascript" src="js/datagrid-dnd.js"></script>
+<script type="text/javascript" src="js/datagrid-cellediting.js"></script>
 <script type="text/javascript" src="js/easyui-lang-zh_TW.js"></script>
 <style>
 #qryUserId + .textbox .textbox-text {
@@ -31,7 +31,7 @@ $(function(){
             {field:'id',hidden:true},
             {field:'sectSeq',title:'節次/考場',width:100,height:100}
         ]]
-    });
+    }).datagrid('enableCellEditing');
     
     //如果paneBackup有值，要把 paneBackup.progId.push('ScMntSect') 
     //                    paneBackup.ScMntSect = {rdId : ?, showType: ?}
@@ -83,7 +83,7 @@ function qryRddList() {
     data.rdId = $("#rdId").textbox('getText');
     data.showType = $("#showType").combobox('getValue');
     $.ajax({
-        url: 'ScRunDown_qryRddm',
+        url: 'ScMntSect_qryRddm',
         type: 'POST',
         data: data,
         dataType: 'json',
@@ -92,10 +92,11 @@ function qryRddList() {
             var rdId = $("#rdId").textbox('getText');
             if (res.success) {
                 var cols = [{}];
-                cols[0] = {field:'sectSeq',title:'節次/考場',width:100,height:100};
+                $("#maxRoom").val(res.maxRoom);
+                cols[0] = {field:'sectSeq',title:'節次/考場',align:'center',width:100};
                 var colLength = res.rddmList.length;
                 for (var i=1; i<=colLength; i++) {
-                	cols[i] = {field:'roomSeq'+i,title:'第' + i + '站',width:100,height:100,
+                	cols[i] = {field:'roomSeq'+i,title:'第' + i + '站',align:'center',width:100,
                 			formatter:function(value,row,index){
                 				var s;
                 				var roomSeqNo = Object.keys(row).filter(function(key) {return row[key] === value})[0].match(/\d+/);
@@ -210,7 +211,7 @@ function crRdRoom() {
     var rdId = $("#rdId").textbox('getText');
     var data = {"rdId":rdId, "editType":"Y"};
     $.ajax({
-        url: 'ScRunDown_crRddm',
+        url: 'ScMntSect_crRddm',
         type: 'POST',
         dataType: 'json',
         data: data,
@@ -232,6 +233,274 @@ function crRdRoom() {
 
 function editRdRoom(){
     $("#rdRoomEdit").dialog({ closed: false });
+    var rdId = $("#rdId").textbox('getText');
+    var maxRoom = $("#maxRoom").val();
+    
+    $("#pRdId").textbox({'readonly':true});
+    $("#pRdId").textbox('setText', rdId);
+    
+    var roomList = [];
+    var sectList = [];
+    
+    for (var i=1;i<=maxRoom;i++) {
+    	roomList[(i-1)] = {'roomSeq':i, 'roomText':'第 ' + i + ' 站'};
+    	sectList[(i-1)] = {'sectSeq':i, 'sectText':'第 ' + i + ' 節'};
+    }
+    
+    var cell = $("#rddmList").datagrid('cell');
+    var roomSeq, sectSeq;
+    if (cell != null && cell != '' && cell.field != 'sectSeq'){
+    	roomSeq = cell.field.match(/\d+/)[0];
+	    sectSeq = cell.index + 1;
+    }
+    
+    $("#pExaminer").combobox({
+        valueField:'examiner',
+        textField:'examinerName',
+        mode: 'remote',
+        loader: function(param,success,error){
+            data = {'param': param.q, 'examiner': 'Y'};
+            $.ajax({
+                url: 'ScRunDown_qryUserList',
+                type: 'POST',
+                data: data,
+                dataType: 'json',
+                success: function(res) {
+                    if (res.success)
+                        success(res.userList);
+                    else
+                        return false;
+                    $("#examiner").val('');
+                }
+            });
+        },
+        onSelect: function(rec){
+        	$("#examiner").val(rec.examiner);
+        }
+    });
+    
+    $("#pRoomId").combobox({
+        valueField:'roomId',
+        textField:'roomName',
+        mode: 'remote',
+        loader: function(param,success,error){
+            data = {'param': param.q};
+            $.ajax({
+                url: 'ScRunDown_qryRoomList',
+                type: 'POST',
+                data: data,
+                dataType: 'json',
+                success: function(res) {
+                    if (res.success)
+                        success(res.roomList);
+                    else
+                        return false;
+                    $("#roomId").val('');
+                }
+            });
+        },
+        onSelect: function(rec){
+        	$("#roomId").val(rec.roomId);
+        }
+    });
+    
+    $("#pPatient1Id").combobox({
+        valueField:'patient',
+        textField:'patientName',
+        mode: 'remote',
+        loader: function(param,success,error){
+            data = {'param': param.q, 'examiner': 'N'};
+            $.ajax({
+                url: 'ScRunDown_qryUserList',
+                type: 'POST',
+                data: data,
+                dataType: 'json',
+                success: function(res) {
+                    if (res.success)
+                        success(res.userList);
+                    else
+                        return false;
+                    $("#patient1Id").val('');
+                }
+            });
+        },
+        onSelect: function(rec){
+            $("#patient1Id").val(rec.roomId);
+        }
+    });
+    
+    $("#pPatient2Id").combobox({
+        valueField:'patient',
+        textField:'patientName',
+        mode: 'remote',
+        loader: function(param,success,error){
+            data = {'param': param.q, 'examiner': 'N'};
+            $.ajax({
+                url: 'ScRunDown_qryUserList',
+                type: 'POST',
+                data: data,
+                dataType: 'json',
+                success: function(res) {
+                    if (res.success)
+                        success(res.userList);
+                    else
+                        return false;
+                    $("#patient2Id").val('');
+                }
+            });
+        },
+        onSelect: function(rec){
+            $("#patient2Id").val(rec.roomId);
+        }
+    });
+    
+    $("#pPatient3Id").combobox({
+        valueField:'patient',
+        textField:'patientName',
+        mode: 'remote',
+        loader: function(param,success,error){
+            data = {'param': param.q, 'examiner': 'N'};
+            $.ajax({
+                url: 'ScRunDown_qryUserList',
+                type: 'POST',
+                data: data,
+                dataType: 'json',
+                success: function(res) {
+                    if (res.success)
+                        success(res.userList);
+                    else
+                        return false;
+                    $("#patient3Id").val('');
+                }
+            });
+        },
+        onSelect: function(rec){
+            $("#patient3Id").val(rec.roomId);
+        }
+    });
+    
+    $("#pRoomSeq").combobox({
+        valueField:'roomSeq',
+        textField:'roomText',
+        data: roomList,
+        onSelect: function(rec) {
+            qryCellData('roomSeq', rec);
+        }
+    });
+    
+    $("#pSectSeq").combobox({
+        valueField:'sectSeq',
+        textField:'sectText',
+        data: sectList,
+        onLoadSuccess: function() {
+        	if (roomSeq > 0)
+        		$("#pRoomSeq").combobox('setValue', roomSeq);
+        	if (sectSeq > 0)
+        		$(this).combobox('select', sectSeq);
+        },
+        onSelect: function(rec) {
+            qryCellData('sectSeq', rec);
+        }
+    });
+}
+
+//查詢節次考站的資料
+function qryCellData(seqType, rec) {
+	var rdId = $("#rdId").textbox('getText');
+	var sectSeq = (seqType == 'sectSeq')? rec.sectSeq : $("#pSectSeq").combobox('getValue');
+	var roomSeq = (seqType == 'roomSeq')? rec.roomSeq : $("#pRoomSeq").combobox('getValue');
+	
+    if (roomSeq == '' || roomSeq == null)
+        return;
+    if (sectSeq == '' || sectSeq == null)
+    	return;
+	
+    var data = {
+    	'rdId': rdId,
+    	'sectSeq': sectSeq,
+    	'roomSeq': roomSeq,
+    	'qryType': 'SCRDDM'
+    };
+    
+	$.ajax({
+        url: 'ScMntSect_qryCellData',
+        type: 'POST',
+        data: data,
+        dataType: 'json',
+        success: function(res) {
+        	parent.showStatus(res);
+        	if (res.success) {
+        		$("#pExaminer").textbox('setText', res.examinerName);
+        		$("#examiner").val(res.examiner);
+        		$("#pRoomId").textbox('setText', res.roomName);
+        		$("#roomId").val(res.roomId);
+        		$("#patient1Id").val(res.patient1);
+        		$("#patient2Id").val(res.patient2);
+        		$("#patient3Id").val(res.patient3);
+        		$("#pPatient1Id").combobox('setText', res.patient1Name);
+        		$("#pPatient2Id").combobox('setText', res.patient2Name);
+        		$("#pPatient3Id").combobox('setText', res.patient3Name);
+        	}
+        	else {
+        		$("#pExaminer").textbox('setText', '');
+                $("#examiner").val('');
+                $("#pRoomId").textbox('setText', '');
+                $("#roomId").val('');
+                $("#patient1Id").val('');
+                $("#patient2Id").val('');
+                $("#patient3Id").val('');
+                $("#pPatient1Id").combobox('setText', '');
+                $("#pPatient2Id").combobox('setText', '');
+                $("#pPatient3Id").combobox('setText', '');
+        	}
+        }
+    });
+}
+
+function rddmEditDone() {
+	var rdId = $("#rdId").textbox('getText');
+    var sectSeq = $("#pSectSeq").combobox('getValue');
+    var roomSeq = $("#pRoomSeq").combobox('getValue');
+    var examiner = $("#examiner").val();
+    var roomId = $("#roomId").val();
+    var patient1 = $("#patient1Id").val();
+    var patient2 = $("#patient2Id").val();
+    var patient3 = $("#patient3Id").val();
+    
+    if (roomSeq == '' || roomSeq == null)
+        return alert('請選擇考站');
+    if (sectSeq == '' || sectSeq == null)
+        return alert('請選擇節次');
+    if (examiner == '' || examiner == null)
+    	return alert('請選擇考官');
+    if (roomId == '' || roomId == null)
+        return alert('請選擇診間');
+    if (patient1 == '' || patient1 == null)
+        return alert('標準病人1需選擇');    
+    
+    var data = {
+        'rdId': rdId,
+        'sectSeq': sectSeq,
+        'roomSeq': roomSeq,
+        'examiner': examiner,
+        'roomId': roomId,
+        'patient1': patient1,
+        'patient2': patient2,
+        'patient3': patient3
+    };
+	
+    $.ajax({
+        url: 'ScMntSect_upRddm',
+        type: 'POST',
+        data: data,
+        dataType: 'json',
+        success: function(res) {
+            parent.showStatus(res);
+            if (res.success) {
+            	alert('更新' + res.sectCnt + "筆資料");
+            }
+        }
+    });
 }
 </script>
 </head>
@@ -283,41 +552,52 @@ function editRdRoom(){
                 <tr class="modPane">
                     <td>選擇節次</td>
                     <td>
-                        <input id="pSectSeq" class="easyui-combobox" style="width: 200px;"/>
+                        <input id="pSectSeq" class="easyui-combobox" style="width: 100px;"/>
                     </td>
                 </tr>
                 <tr class="modPane">
                     <td>選擇考站</td>
                     <td>
-                        <input id="pQsId" class="easyui-combobox" style="width: 90px;"/>
-                    </td>
-                </tr>
-                <tr class="modPane">
-                    <td>考官</td>
-                    <td>
-                        <input id="pExaminerId" class="easyui-combobox" style="width: 90px;"/>
-                    </td>
-                </tr>
-                <tr class="modPane">
-                    <td>診間</td>
-                    <td>
-                        <input id="pRoomId" class="easyui-combobox" style="width: 90px;"/>
-                    </td>
-                </tr>
-                <tr class="modPane">
-                    <td>標準病人</td>
-                    <td>
-                        <input id="pPatient1Id" class="easyui-combobox" style="width: 90px;"/>
-                        <input id="pPatient2Id" class="easyui-combobox" style="width: 90px;"/>
-                        <input id="pPatient3Id" class="easyui-combobox" style="width: 90px;"/>
-                    </td>
-                </tr>
-                <tr>
-                    <td colspan="2" style="text-align: center;">
-                        <button type="button" style="width: 100px;" onclick="rdRoomEditDone('E');">儲存考場變更</button>
+                        <input id="pRoomSeq" class="easyui-combobox" style="width: 100px;"/>
                     </td>
                 </tr>
             </table>
+            
+	        <table style="margin: 20px 0 0 20px;">
+	            <tr>
+	               <th>異動項目</th>
+	            </tr>
+	            <tr class="modPane">
+	                <td>考官</td>
+	                <td>
+	                    <input id="pExaminer" class="easyui-combobox" style="width: 100px;"/>
+	                    <input type="hidden" id="examiner"/>
+	                </td>
+	            </tr>
+	            <tr class="modPane">
+	                <td>診間</td>
+	                <td>
+	                    <input id="pRoomId" class="easyui-combobox" style="width: 100px;"/>
+	                    <input type="hidden" id="roomId"/>
+	                </td>
+	            </tr>
+	            <tr class="modPane">
+	                <td>標準病人</td>
+	                <td>
+	                    <input id="pPatient1Id" class="easyui-combobox" style="width: 100px;"/>
+	                    <input type="hidden" id="patient1Id"/>
+	                    <input id="pPatient2Id" class="easyui-combobox" style="width: 100px;"/>
+	                    <input type="hidden" id="patient2Id"/>
+	                    <input id="pPatient3Id" class="easyui-combobox" style="width: 100px;"/>
+	                    <input type="hidden" id="patient3Id"/>
+	                </td>
+	            </tr>
+	            <tr>
+	                <td colspan="2" style="text-align: center;">
+	                    <button type="button" style="width: 100px;" onclick="rddmEditDone('E');">儲存考場變更</button>
+	                </td>
+	            </tr>
+	        </table>
         </div>
     </div>
 </div>
@@ -331,6 +611,7 @@ function editRdRoom(){
 <input type="hidden" id="status" value="${status}" />
 <input type="hidden" id="statusTime" value="${statusTime}" />
 <input type="hidden" id="paneBackup" value="${paneBackup}" />
+<input type="hidden" id="maxRoom" value="${maxRoom}" />
 </body>
 <script type="text/javascript">
 parent.showProg({ id: $("#progId").val(), priv: $("#privDesc").val(), title: $("#progTitle").val() });

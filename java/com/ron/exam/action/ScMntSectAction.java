@@ -3,8 +3,10 @@ package com.ron.exam.action;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -17,6 +19,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
+import com.ron.exam.service.ProgData;
+import com.ron.exam.service.UserData;
 import com.ron.exam.util.DbUtil;
 import com.ron.exam.util.ExceptionUtil;
 import com.ron.exam.util.StdCalendar;
@@ -25,47 +29,70 @@ import com.ron.exam.util.StopException;
 @EnableWebMvc
 @Controller
 public class ScMntSectAction {
+    
+    private static final String c_progId = "ScMntSect";
+    
     @RequestMapping(value = "/ScMntSect", method = RequestMethod.GET)
     public String execute(Model model, @RequestParam Map<String, String> req) {
-        
-                
-        String rdId = req.get("rdId");
-        String showType = req.get("showType");
-        String progId = null;
-        JSONObject paneBackup = new JSONObject();
-        // 紀錄跳頁的作業名稱，用List去存，最後一筆就會是呼叫本作業的作業名稱
-        List<String> progIdList = new ArrayList<String>();
-        for (int i = 0; ; i++) {
-            String key = "p_b_progId[" + i + "]";
-            if (!req.containsKey(key))
-                break;
-            progId = req.get(key);
-            progIdList.add(progId);
-        }
-        paneBackup.put("progId", progIdList);
-        
-        model.addAttribute("bProgId", progId);
-        model.addAttribute("rdId", rdId);
-        
-        if (showType != null && !showType.isEmpty())
-            model.addAttribute("showType", showType);
-        else if (progId != null && progId.equals("ScRunDown")) {
-            model.addAttribute("showType", "S");
-            Map<String, String> p_b_ScRunDown = new HashMap<String, String>();
+        Map<String, Object> res = new HashMap<String, Object>();
+        try {
+            res.put("status", "");
+            res.put("statusTime", new StdCalendar().toTimesString());
+            
+            UserData ud = UserData.getUserData();
+            ProgData pd = ProgData.getProgData();
+            res.put("progId", c_progId);
+            res.put("privDesc", ud.getPrivDesc(c_progId));
+            res.put("progTitle", pd.getProgTitle(c_progId));
+            res.put("queryHide", ProgData.c_privBaseQuery.equals(ud.getPrivBase(c_progId)) ? "visibility: hidden;" : "");
+            
+            String rdId = req.get("rdId");
+            String showType = req.get("showType");
+            String progId = null;
+            JSONObject paneBackup = new JSONObject();
+            // 紀錄跳頁的作業名稱，用List去存，最後一筆就會是呼叫本作業的作業名稱
+            List<String> progIdList = new ArrayList<String>();
             for (int i = 0; ; i++) {
-                String key = "p_b_ScRunDown[" + i + "]";
+                String key = "p_b_progId[" + i + "]";
                 if (!req.containsKey(key))
                     break;
-                String queryCol = req.get(key);
-                String[] col = queryCol.split(":", -1);
-                p_b_ScRunDown.put(col[0], col[1]);
+                progId = req.get(key);
+                progIdList.add(progId);
             }
-            paneBackup.put("ScRunDown", p_b_ScRunDown);
-        }            
-        else
-            model.addAttribute("showType", "R");
-        System.out.println(paneBackup.toString());
-        model.addAttribute("paneBackup", paneBackup.toString().replaceAll("\"", "'"));
+            paneBackup.put("progId", progIdList);
+            
+            model.addAttribute("bProgId", progId);
+            model.addAttribute("rdId", rdId);
+            
+            if (showType != null && !showType.isEmpty())
+                model.addAttribute("showType", showType);
+            else if (progId != null && progId.equals("ScRunDown")) {
+                model.addAttribute("showType", "S");
+                Map<String, String> p_b_ScRunDown = new HashMap<String, String>();
+                for (int i = 0; ; i++) {
+                    String key = "p_b_ScRunDown[" + i + "]";
+                    if (!req.containsKey(key))
+                        break;
+                    String queryCol = req.get(key);
+                    String[] col = queryCol.split(":", -1);
+                    p_b_ScRunDown.put(col[0], col[1]);
+                }
+                paneBackup.put("ScRunDown", p_b_ScRunDown);
+            }            
+            else
+                model.addAttribute("showType", "R");
+            //System.out.println(paneBackup.toString());
+            model.addAttribute("paneBackup", paneBackup.toString().replaceAll("\"", "'"));
+        }
+        catch (Exception e) {
+            res.put("status", ExceptionUtil.procExceptionMsg(e));
+        }
+        
+        Iterator<Entry<String, Object>> resi = res.entrySet().iterator();
+        while (resi.hasNext()) {
+            Entry<String, Object> rese = resi.next();
+            model.addAttribute(rese.getKey(), rese.getValue());
+        }
         return "ScMntSect";
     }
     
@@ -110,15 +137,17 @@ public class ScMntSectAction {
         List<Integer> a = new ArrayList<Integer>();
         List<Integer> b = new ArrayList<Integer>();
         
+        Map<String, String> reqRd = new HashMap<String, String>();
+        reqRd.put("rdId", rdId);
         ScRunDownAction ScRunDown = new ScRunDownAction();
         List<Map<String,Object>> rowRdrms = new ArrayList<Map<String,Object>>();
         if (editType != null && editType.equals("Y"))
-            rowRdrms = ScRunDown.qryRdrmList(req, dbu);
+            rowRdrms = ScRunDown.qryRdrmList(reqRd, dbu);
         
         for (int i=0; i<maxSect; i++){
             List<Map<String, Object>> rowSect = dbu.selectMapAllList(sqlQryRd, rdId, (i+1));
             Map<String, Object> rowData = new HashMap<String, Object>();
-            rowData.put("sectSeq", (i+1));
+            rowData.put("sectSeq", "第 " + (i+1) + " 節");
             int r = 1;
             for (Map<String, Object> sect : rowSect){
                 rowData.put("roomSeq" + r, sect.get("name"));
@@ -184,7 +213,8 @@ public class ScMntSectAction {
                 rowRddms.add(rowData);
             }
         }
-        System.out.println("rdId = " + rdId + " size = " + rowRddms.size());
+        //System.out.println("rdId = " + rdId + " size = " + rowRddms.size());
+        
         return rowRddms;
     }
     
@@ -232,12 +262,40 @@ public class ScMntSectAction {
         return maxRdCnt;
     }
     
+  //考試表更新
+    private int upRddm(Map<String, String> req, DbUtil dbu) throws SQLException, Exception {
+        String rdId = req.get("rdId");
+        int roomSeq = Integer.parseInt(req.get("roomSeq"));
+        int sectSeq = Integer.parseInt(req.get("sectSeq"));
+        
+        String roomId = req.get("roomId");
+        String examiner = req.get("examiner");
+        String patient1 = req.get("patient1");
+        String patient2 = req.get("patient2");
+        String patient3 = req.get("patient3");
+
+        String sqlUpRddm = 
+                  "UPDATE scrddm \n"
+                + "   SET room_id = ? \n"
+                + "     , examiner = ? \n"
+                + "     , patient1 = ?, patient2 = ?, patient3 = ? \n"
+                + " WHERE rd_id=? \n"
+                + "   AND room_seq = ? \n"
+                + "   AND sect_seq >= ? ;\n";
+        
+        int sectCnt = 0;
+        sectCnt = dbu.executeList(sqlUpRddm, roomId, examiner, patient1, patient2, patient3, rdId, roomSeq, sectSeq);
+        //dbu.executeList(sqlDelRddm, rdId);
+        
+        return sectCnt;
+    }
+    
     /**
      * 考試表查詢畫面
      * @param req
      * @return
      */
-    @RequestMapping(value = "/ScRunDown_qryRddm", method = RequestMethod.POST)
+    @RequestMapping(value = "/ScMntSect_qryRddm", method = RequestMethod.POST)
     public @ResponseBody Map<String, Object> qryRddm(@RequestParam Map<String, String> req) {
         Map<String, Object> res = new HashMap<String, Object>();
         res.put("status", "");
@@ -259,6 +317,7 @@ public class ScMntSectAction {
             else if (maxSect < maxRoom)
                 res.put("rddmCrHide", "Y");
             
+            res.put("maxRoom", maxRoom);
             res.put("rddmList", rowRddms);            
             res.put("success", true);
             res.put("status", "查詢梯次資料完成");
@@ -282,7 +341,7 @@ public class ScMntSectAction {
      * @param req
      * @return
      */
-    @RequestMapping(value = "/ScRunDown_crRddm", method = RequestMethod.POST)
+    @RequestMapping(value = "/ScMntSect_crRddm", method = RequestMethod.POST)
     public @ResponseBody Map<String, Object> crRddm(@RequestParam Map<String, String> req) {
         Map<String, Object> res = new HashMap<String, Object>();
         res.put("status", "");
@@ -315,6 +374,89 @@ public class ScMntSectAction {
         }
         dbu.relDbConn();
         
+        return res;
+    }
+    
+    
+    /**
+     * 考試表調整
+     * @param req
+     * @return
+     */
+    @RequestMapping(value = "/ScMntSect_upRddm", method = RequestMethod.POST)
+    public @ResponseBody Map<String, Object> upRddm(@RequestParam Map<String, String> req) {
+        Map<String, Object> res = new HashMap<String, Object>();
+        res.put("status", "");
+        res.put("statusTime", new StdCalendar().toTimesString());
+
+        res.put("success", false);
+        DbUtil dbu = new DbUtil();
+        try
+        {
+            int sectCnt = upRddm(req, dbu);
+            
+            if (sectCnt == 0)
+                throw new StopException("考試表更新無資料");
+            
+            dbu.doCommit();
+            res.put("sectCnt", sectCnt);
+            res.put("success", true);
+            res.put("status", "考試表資料更新完成");
+        }
+        catch (StopException e) {
+            res.put("status", e.getMessage());
+        }
+        catch (SQLException e) {
+            res.put("status", DbUtil.exceptionTranslation(e));
+        }
+        catch (Exception e) {
+            res.put("status", ExceptionUtil.procExceptionMsg(e));
+        }
+        dbu.relDbConn();
+        
+        return res;
+    }
+    
+    /**
+     * 查詢某節、站之資料
+     * @param req
+     * @return
+     */
+    @RequestMapping(value = "/ScMntSect_qryCellData", method = RequestMethod.POST)
+    public @ResponseBody Map<String, Object> qryCellData(@RequestParam Map<String, String> req) { 
+        Map<String, Object> res = new HashMap<String, Object>();
+        DbUtil dbu = new DbUtil();
+        try {
+            ScRunDownAction scRunDown = new ScRunDownAction();
+            List<Map<String,Object>> rowRdrmList = new ArrayList<Map<String,Object>>();
+            rowRdrmList = scRunDown.qryRdrmList(req, dbu);
+            if (rowRdrmList.size() == 0)
+                throw new StopException("查無站次資料");
+            Map<String,Object> rowRdrm = new HashMap<String,Object>();
+            rowRdrm = rowRdrmList.get(0);
+            res.put("roomId", (String) rowRdrm.get("roomId"));
+            res.put("roomName", (String) rowRdrm.get("roomName"));
+            res.put("examiner", (String) rowRdrm.get("examiner"));
+            res.put("examinerName", (String) rowRdrm.get("examinerName"));
+            res.put("patient1", (String) rowRdrm.get("patient1"));
+            res.put("patient2", (String) rowRdrm.get("patient2"));
+            res.put("patient3", (String) rowRdrm.get("patient3"));
+            res.put("patient1Name", (String) rowRdrm.get("patient1Name"));
+            res.put("patient2Name", (String) rowRdrm.get("patient2Name"));
+            res.put("patient3Name", (String) rowRdrm.get("patient3Name"));
+            res.put("success", true);
+            res.put("status", "節次資料查詢完成");
+        }
+        catch (StopException e) {
+            res.put("status", e.getMessage());
+        }
+        catch (SQLException e) {
+            res.put("status", DbUtil.exceptionTranslation(e));
+        }
+        catch (Exception e) {
+            res.put("status", ExceptionUtil.procExceptionMsg(e));
+        }
+        dbu.relDbConn();
         return res;
     }
 }

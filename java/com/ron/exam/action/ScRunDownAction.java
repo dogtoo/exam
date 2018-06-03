@@ -267,21 +267,45 @@ public class ScRunDownAction {
         List<Map<String, Object>> rowRdrms = new ArrayList<Map<String, Object>>();
         
         String rdId = req.get("rdId");
+        int roomSeq = 0;
+        int sectSeq = 0;
+        String qryType = "";
+        
+        if (req.get("qryType") != null && req.get("qryType").equals("SCRDDM")) {
+            roomSeq = Integer.parseInt(req.get("roomSeq"));
+            sectSeq = Integer.parseInt(req.get("sectSeq"));
+            qryType = req.get("qryType");
+        }
         
         String sqlRdrm =
-                 "SELECT a.rd_id \"rdId\", a.room_seq \"roomSeq\", a.qs_id \"qsId\", a.room_id \"roomId\" \n"
-               + "     , a.examiner, a.patient1, a.patient2, a.patient3 \n"
-               + "     , (select qs_name from qsmstr where qs_id = a.qs_id ) \"qsName\" \n "
-               + "     , (select room_name from EXROOM where room_id = a.room_id ) \"roomName\" \n"
+                 "SELECT a.rd_id \"rdId\", a.room_seq \"roomSeq\", a.room_id \"roomId\" \n"
+               + "     , a.examiner, a.patient1, a.patient2, a.patient3 \n";
+        if (qryType.equals("SCRDRM") || qryType.equals("")) { // ScMntSet會來查SCRDDM 因為跟 SCRDRM差不多欄位所以就共用一下
+            sqlRdrm +=
+                 "     , a.qs_id \"qsId\" \n"
+               + "     , (select qs_name from qsmstr where qs_id = a.qs_id ) \"qsName\" \n ";
+        }
+        sqlRdrm +=
+                 "     , (select room_name from EXROOM where room_id = a.room_id ) \"roomName\" \n"
                + "     , (select user_name from cmuser where user_id = a.examiner) \"examinerName\" \n"
                + "     , (select user_name from mbdetl where user_id = a.patient1) \"patient1Name\" \n"
                + "     , (select user_name from mbdetl where user_id = a.patient2) \"patient2Name\" \n"
-               + "     , (select user_name from mbdetl where user_id = a.patient3) \"patient3Name\" \n"
-               + "  FROM SCRDRM a \n"
-               + " WHERE rd_id = ? \n"
+               + "     , (select user_name from mbdetl where user_id = a.patient3) \"patient3Name\" \n";
+        if (qryType.equals("SCRDRM") || qryType.equals("")) { 
+            sqlRdrm +=
+                 "  FROM SCRDRM a \n";
+        }
+        else {
+            sqlRdrm +=
+                 "  FROM SCRDDM a \n";
+        }
+        sqlRdrm +=
+                 " WHERE rd_id = ? \n"
+               + "   AND (coalesce(?, 0) = 0 OR room_seq = ?) \n"
+               + "   AND (coalesce(?, 0) = 0 OR sect_seq = ?) \n"
                + " ORDER BY room_seq ASC \n";
-        rowRdrms = dbu.selectMapAllList(sqlRdrm, rdId);
-        System.out.println("rdId = " + rdId + " size = " + rowRdrms.size());
+        rowRdrms = dbu.selectMapAllList(sqlRdrm, rdId, roomSeq, roomSeq, sectSeq, sectSeq);
+        //System.out.println("rdId = " + rdId + " size = " + rowRdrms.size());
         return rowRdrms;
     }
     
@@ -410,11 +434,6 @@ public class ScRunDownAction {
         
         String rdId = req.get("pRdId");
         delCnt = dbu.executeList(delSect, rdId);
-        
-        if (req.get("sectClean").equals("true")) {
-            dbu.executeList(upRdmmStsS, "N", rdId);
-            return delCnt;
-        }    
         
         int seqNo, sectSeq, sectTime, relaTime;
         String sectType, fileName, execTime;

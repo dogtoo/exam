@@ -66,7 +66,7 @@ $(function(){
                     //尚未建立節次及考生 
                     if (row.stsS != 'Y')
                         S = ' 節次';
-                    if (row.stsE != 'S')
+                    if (row.stsE != 'S' && row.stsE != 'Y')
                         E1 = ' 考生';
                     
                   	//考試中
