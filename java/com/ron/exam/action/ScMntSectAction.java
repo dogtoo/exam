@@ -190,7 +190,7 @@ public class ScMntSectAction {
                 
                 Map<String, Object> rowData = new HashMap<String, Object>();
                 int r = 1;
-                rowData.put("sectSeq", (i+2)); //這邊是做節次2之後的
+                rowData.put("sectSeq", "第 " + (i+2) + " 節"); //這邊是做節次2之後的 
                 for (int idx: c) {
                     //System.out.println(rowRddms.get(0).get("roomSeq"+(idx+1) ));
                     rowData.put("roomSeq" + r, rowRddms.get(0).get("roomSeq"+(idx+1)));

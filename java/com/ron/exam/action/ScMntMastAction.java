@@ -54,6 +54,29 @@ public class ScMntMastAction {
 			res.put("qsTargetList",  ParamSvc.buildSelectOptionByClass(dbu, ParamSvc.c_clsQsTarget,  true));
 			res.put("qsClassList",   ParamSvc.buildSelectOptionByClass(dbu, ParamSvc.c_clsQsClass,   false));
 			res.put("qsAbilityList", ParamSvc.buildSelectOptionByClass(dbu, ParamSvc.c_clsQsAbility, false));
+		
+			StringBuffer sqlQryOpt = new StringBuffer(
+					  " SELECT opt_class, opt_id, opt_desc, no_sel, score \n"
+				    + "   FROM scoptm \n"
+				    + "  WHERE opt_class LIKE 'M%' \n"
+				    + "    AND opt_id <> '-' \n "
+				    + "   ORDER BY opt_class, show_order \n");
+			List<Object> params = new ArrayList<Object>();
+			ResultSet rsOpt = dbu.queryArray(sqlQryOpt.toString(), params.toArray());
+			List<Map<String, Object>> optList = new ArrayList<Map<String, Object>>();
+			while (rsOpt.next()) {
+				Map<String, Object> opt = new HashMap<String, Object>();
+				opt.put("optClass", rsOpt.getString("opt_class"));
+				opt.put("optId",    rsOpt.getString("opt_id"));
+				opt.put("optDesc",  rsOpt.getString("opt_desc"));
+				opt.put("noSel",    rsOpt.getString("no_sel"));
+				opt.put("score",    rsOpt.getString("score"));
+				optList.add(opt);
+			}
+			rsOpt.close();
+// 怎麼回給畫面 0.0
+//			res.put("optList", optList);
+			model.addAttribute("optList",    optList);
 		}
 		catch (SQLException e) {
 			res.put("status", DbUtil.exceptionTranslation(e));
@@ -85,7 +108,6 @@ public class ScMntMastAction {
 		DbUtil dbu = new DbUtil();
 		try {	
 			res.put("success",  false);
-			String mode = req.get("mode");
 			int pageRow = Integer.MAX_VALUE;
 			int pageAt  = 0;
 			try {
@@ -102,8 +124,6 @@ public class ScMntMastAction {
 			}
 			catch (Exception e) {
 			}
-			if ("N".equals(mode))
-				pageAt = 0;
 			
 			// 查詢條件
 			StringBuffer sqlQryQs = new StringBuffer(
@@ -171,11 +191,8 @@ public class ScMntMastAction {
 				sqlCond.append(")\n");
 			}
 
-			// 非換頁查詢時，需先查詢總筆數
-			if ("N".equals(mode) || "T".equals(mode)) {
-				sqlCntQs.append(sqlCond);
-				res.put("total", dbu.selectIntArray(sqlCntQs.toString(), params.toArray()));
-			}		
+			sqlCntQs.append(sqlCond);
+			res.put("total", dbu.selectIntArray(sqlCntQs.toString(), params.toArray()));
 			sqlQryQs.append(sqlCond);
 			
 			// 排序
@@ -220,14 +237,14 @@ public class ScMntMastAction {
 			}
 
 			// 結果
-			//Map<String, String> totalOptClassMap = ParamSvc.buildStringRankMap(dbu, "T");
+			Map<String, String> totalOptClassMap = CodeSvc.buildStringRankMap(dbu, "T");
 			ResultSet rsQs = dbu.queryArray(sqlQryQs.toString(), params.toArray());
 			List<Map<String, Object>> qsList = new ArrayList<Map<String, Object>>();
 			while (rsQs.next()) {
 				Map<String, Object> qs = new HashMap<String, Object>();
 				qs.put("qsId",          rsQs.getString("qs_id"));
 				qs.put("qsName",        rsQs.getString("qs_name"));
-				//qs.put("totalOptClass", totalOptClassMap.get(rsQs.getString("total_opt_class")));
+				qs.put("totalOptClass", totalOptClassMap.get(rsQs.getString("total_opt_class")));
 				qs.put("totalScore",    rsQs.getString("total_score"));
 				qs.put("passScore",     rsQs.getString("pass_score"));
 				qs.put("borderline",    rsQs.getString("borderline"));
@@ -266,7 +283,7 @@ public class ScMntMastAction {
 		DbUtil dbu = new DbUtil();
 		try {
 			res.put("success", false);
-			//res.put("totalOptClassList", ParamSvc.buildSelectRankData(dbu, "T", true));
+			res.put("totalOptClassList", CodeSvc.buildSelectRankData(dbu, "T", true,  true));
 
 			String qsId = req.get("qsId");
 			if (qsId != null) {
@@ -294,7 +311,7 @@ public class ScMntMastAction {
 				res.put("totalScore",    rowQs.get("total_score"));
 				res.put("passScore",     rowQs.get("pass_score"));
 				res.put("borderline",    rowQs.get("borderline"));
-				res.put("fract",         rowQs.get("fract"));		
+				res.put("fract",         rowQs.get("fract"));
 			}
 			
 			res.put("success", true);
@@ -511,7 +528,7 @@ public class ScMntMastAction {
 		DbUtil dbu = new DbUtil();
 		try {
 			res.put("success", false);
-			//res.put("optClassList", ParamSvc.buildSelectRankData(dbu, "M" + req.get("fract"), true));
+			res.put("optClassList", CodeSvc.buildSelectRankData(dbu, "M" + req.get("fract"), true, true));
 
 			String qsId = req.get("qsId");
 			if (qsId != null) {
@@ -613,7 +630,7 @@ public class ScMntMastAction {
 				item.tip      = req.get("tip[" + i + "]");
 				itemList.add(item);
 			}
-			
+
 			// 執行
 			String sqlDelD = " DELETE FROM scqstd WHERE qs_id = ?";
 			dbu.executeList(sqlDelD, qsId);

@@ -301,10 +301,17 @@ public class ScRunDownAction {
         }
         sqlRdrm +=
                  " WHERE rd_id = ? \n"
-               + "   AND (coalesce(?, 0) = 0 OR room_seq = ?) \n"
-               + "   AND (coalesce(?, 0) = 0 OR sect_seq = ?) \n"
-               + " ORDER BY room_seq ASC \n";
-        rowRdrms = dbu.selectMapAllList(sqlRdrm, rdId, roomSeq, roomSeq, sectSeq, sectSeq);
+               + "   AND (coalesce(?, 0) = 0 OR room_seq = ?) \n";
+        if (qryType.equals("SCRDDM")) {
+            sqlRdrm += 
+                 "   AND (coalesce(?, 0) = 0 OR sect_seq = ?) \n";
+        }
+        sqlRdrm +=
+                 " ORDER BY room_seq ASC \n";
+        if (qryType.equals("SCRDDM")) 
+            rowRdrms = dbu.selectMapAllList(sqlRdrm, rdId, roomSeq, roomSeq, sectSeq, sectSeq);
+        else
+            rowRdrms = dbu.selectMapAllList(sqlRdrm, rdId, roomSeq, roomSeq);
         //System.out.println("rdId = " + rdId + " size = " + rowRdrms.size());
         return rowRdrms;
     }
