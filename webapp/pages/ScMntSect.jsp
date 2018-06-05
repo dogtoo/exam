@@ -100,7 +100,7 @@ function qryRddList() {
                 			formatter:function(value,row,index){
                 				var s;
                 				var roomSeqNo = Object.keys(row).filter(function(key) {return row[key] === value})[0].match(/\d+/);
-                				if (paneBackup.progId[paneBackup.progId.length-1] == 'ScQryScore') {
+                				if (paneBackup.progId[paneBackup.progId.length-2] == 'ScQryScore') {
                 					s = '<button class="easyui-linkbutton" onclick="parent.selProg(\'ScQryScore?rdId=' + rdId 
                 					                                                                        + "&sectSeq=" + row.sectSeq
                 					                                                                        + "&roomSeq=" + roomSeqNo[0];
