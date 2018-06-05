@@ -82,14 +82,36 @@ public class ScSetScoreAction {
 			paneBackup.put(    "progId",  progIdList);
 			model.addAttribute("bProgId", progId);
 			model.addAttribute("rdId", rdId);
-			model.addAttribute("sectSeq", sectSeq);
-			model.addAttribute("roomSeq", roomSeq);
+			//model.addAttribute("sectSeq", sectSeq);
+			//model.addAttribute("roomSeq", roomSeq);
+			
+			Map<String, String> qryExaminee = new HashMap<String, String>();
+			qryExaminee.put("rdId", rdId);
+			qryExaminee.put("sectSeq", sectSeq);
+			qryExaminee.put("roomSeq", roomSeq);
+			qryExaminee.put("qryType", "SCRDDM");
+			ScRunDownAction scRunDown = new ScRunDownAction();
+			List<Map<String,Object>> rowRddmList = new ArrayList<Map<String,Object>>();
+			rowRddmList = scRunDown.qryRdrmList(qryExaminee, dbu);
+			if (rowRddmList.size() == 0)
+                throw new StopException("查無考生資料");
+            Map<String,Object> rowRddm = new HashMap<String,Object>();
+            rowRddm = rowRddmList.get(0);
+            String examineeText = (String) rowRddm.get("examineeName");
+            String examinee = (String) rowRddm.get("examinee");     
+            model.addAttribute("examineeText", examineeText);
+            model.addAttribute("examinee", examinee);
 
 			if (progId != null && progId.equals("ScMntSect")) {
 			    model.addAttribute("paneBackup", paneBackup.toString().replaceAll("\"", "'"));
             }    
-			
 		}
+        catch (StopException e) {
+            res.put("status", e.getMessage());
+        }
+        catch (SQLException e) {
+            res.put("status", DbUtil.exceptionTranslation(e));
+        }
 		catch (Exception e) {
 			res.put("status", ExceptionUtil.procExceptionMsg(e));
 		}
@@ -103,7 +125,7 @@ public class ScSetScoreAction {
 		}
 		return "ScSetScore";
 	}
-	
+
 	@RequestMapping(value = "/ScSetScore_qryRdList", method = RequestMethod.POST)
 	public @ResponseBody Map<String, Object> qryRdList(@RequestParam Map<String, String> req) {
 		Map<String, Object> res = new HashMap<String, Object>();
@@ -161,21 +183,27 @@ public class ScSetScoreAction {
 			res.put("success",  false);
 			//res.put("optIdList", CodeSvc.buildSelectRankData(dbu, "TAA", false, true));
 			
-			String  qryBProgId = req.get("bProgId");
+			//String  qryBProgId = req.get("bProgId");
 			String  qryRdId    = req.get("rdId");
-			Integer qryRoomSeq = 0;
+			//Integer qryRoomSeq = 0;
 			String  qryUserId  = req.get("userId");
 			Object  qryCon;
-			if (qryBProgId != null) {
-				qryRoomSeq = Integer.parseInt(req.get("roomSeq"));
-			}
+			//if (qryBProgId != null) {
+			//	qryRoomSeq = Integer.parseInt(req.get("roomSeq"));
+			//}
 
 			// 教案名稱
 			StringBuffer sqlQryQsName = new StringBuffer(
 					  " SELECT B.qs_name \n"
 					+ "   FROM scrdrm A, qsmstr B \n"
 				    + "  WHERE A.qs_id = B.qs_id \n"
-					+ "    AND A.rd_id = ? \n");
+					+ "    AND A.rd_id = ? \n"
+				    + "    AND A.examiner = ? \n");
+			/*
+select * from scrddm where rd_id = '20180530001' and examiner='TEST2';
+select * from scrdrm where rd_id = '20180530001' and room_seq = '2';
+
+select b.qs_name  from scrddm a, qsmstr b where a.qs_id = b.qs_id and rd_id = '20180530001' and examiner='TEST2';
 			// 不是評分查詢來的用考官查
 			if (qryBProgId == null) {
 				sqlQryQsName.append("    AND A.examiner = ? \n");
@@ -185,11 +213,12 @@ public class ScSetScoreAction {
 				sqlQryQsName.append("    AND A.room_seq = ? \n");
 				qryCon = qryRoomSeq;
 			}
-			Map<String, Object> rowQs = dbu.selectMapRowList(sqlQryQsName.toString(), qryRdId, qryCon);
-			res.put("qsName", rowQs.get("qs_name"));
+			*/
+			//Map<String, Object> rowQs = dbu.selectMapRowList(sqlQryQsName.toString(), qryRdId, qryCon);
+			//res.put("qsName", rowQs.get("qs_name"));
 
 			// 考生清單 評分查詢來的就不查了
-			if (qryBProgId == null) {
+			//if (qryBProgId == null) {
 				StringBuffer sqlQryEx = new StringBuffer(
 						  " SELECT sect_seq, examinee, room_seq \n"
 						+ "	  FROM scrddm \n"
@@ -210,7 +239,7 @@ public class ScSetScoreAction {
 				}
 				rsEx.close();
 				res.put("exList", exList);
-			}
+			//}
 			
 			res.put("success", true);
 			res.put("status", "查詢考生完成");

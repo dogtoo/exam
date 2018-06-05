@@ -36,6 +36,33 @@ $(function(){
     data.examinee = $("#examinee").combobox('getValue');
     
     paneBackup.ScSetScore = data;
+    
+    $("#rdId").combogrid({
+    	panelWidth:301,
+    	idField:'fRdId',
+    	textField:'fRdName',
+    	mode: 'remote',
+        loader: function(param,success,error){
+            data = {'rdId': param.q};
+            $.ajax({
+                url: 'ScSetScore_qryExList',
+                type: 'POST',
+                data: data,
+                dataType: 'json',
+                success: function(res) {
+                    if (res.success)
+                        success(res.userList);
+                    else
+                        return false;
+                    $("#examiner").val('');
+                }
+            });
+        },
+        columns:[[
+            {field:'fRdId',   title:'代碼', width: 100},
+            {field:'fRdDesc', title:'名稱', width: 200},
+        ]]
+    });
 });
 /*
  * 查詢梯次。
@@ -278,14 +305,7 @@ function backProgId(bProgId) {
 			<tr>
 				<td>
 					梯次：
-					<select id="rdId" class="easyui-combogrid" style="width:105px;"
-				        data-options="panelWidth:301, idField:'fRdId', textField:'fRdName', onClickRow: qryExList,
-				            columns:[[
-				                {field:'fRdId',   title:'代碼', width: 100},
-				                {field:'fRdDesc', title:'名稱', width: 200},
-				            ]]
-				            ">
-				    </select>
+					<input id="rdId" class="easyui-combogrid" style="width:105px;" value="${rdId}"/>
 				</td>
 				<td style="width: 180px; text-align: right;">
 					教案：
@@ -293,7 +313,7 @@ function backProgId(bProgId) {
 				</td>
 				<td style="width: 180px; text-align: right;">
 					考生：
-					<select id="examinee" class="easyui-combogrid" style="width:120px;"
+					<input id="examinee" class="easyui-combogrid" style="width:120px;" value="${examinee}"
 				        data-options="panelWidth:241, idField:'fExaminee', textField:'fExaminee', onClickRow: qryItemList,
 				            columns:[[
 				                {field:'fSectSeq',  title:'節次', width:  40},
@@ -301,7 +321,7 @@ function backProgId(bProgId) {
 				                {field:'fRoomSeq',  title:'站別', width:  40},
 				                {field:'fTime',     title:'時間', width:  60},
 				            ]]">
-				    </select>
+				    </input>
 				    <input type="hidden" id="pExaminee" value="${pExaminee}"/>
 				    <input type="hidden" id="sectSeq"   value="${sectSeq}"/>
 				    <input type="hidden" id="roomSeq"   value="${roomSeq}"/>

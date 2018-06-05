@@ -285,6 +285,11 @@ public class ScRunDownAction {
                  "     , a.qs_id \"qsId\" \n"
                + "     , (select qs_name from qsmstr where qs_id = a.qs_id ) \"qsName\" \n ";
         }
+        else {
+            sqlRdrm +=
+                 "     , a.examinee \n"
+               + "     , (select user_name from mbdetl where user_id = a.examinee) \"examineeName\" \n ";
+        }
         sqlRdrm +=
                  "     , (select room_name from EXROOM where room_id = a.room_id ) \"roomName\" \n"
                + "     , (select user_name from cmuser where user_id = a.examiner) \"examinerName\" \n"
