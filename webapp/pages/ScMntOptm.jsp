@@ -6,8 +6,12 @@
 <title></title>
 <link rel="stylesheet" type="text/css" href="css/easyui.css" />
 <link rel="stylesheet" type="text/css" href="css/exam.css" />
+<link rel="stylesheet" type="text/css" href="css/icon.css" />
 <script type="text/javascript" src="js/jquery-1.12.4.js"></script>
 <script type="text/javascript" src="js/jquery.easyui.min.js"></script>
+<script type="text/javascript" src="js/datagrid-dnd.js"></script>
+<script type="text/javascript" src="js/datagrid-cellediting.js"></script>
+<script type="text/javascript" src="js/jquery.edatagrid.js"></script>
 <script type="text/javascript" src="js/easyui-lang-zh_TW.js"></script>
 <style>
 #qryOptClass + .textbox .textbox-text {
@@ -23,6 +27,11 @@
 
 </style>
 <script type="text/javascript">
+
+$(function(){
+	qryOptMList('N');
+});
+
 function chgOrder(nfld, ofld) {
 	var jorder = $("#order");
 	if (jorder.hasClass("inprog"))
@@ -80,6 +89,7 @@ function clearAll() {
 	chgOrder();
 	$("#pg").pagination({ total: 0});
 	$("#optMList tr").remove();
+	$("#optDList").datagrid("loadData", []);
 	delete window.queryCond1;
 }
 
@@ -90,32 +100,7 @@ function qryOptDList(optClass) {
 		parent.showStatus(res);
 		if ('optDList' in res) {
 			var queryHide = $("#queryHide").val();
-			var joptDList = $("#optDList");
-			joptDList.find("tr").remove();
-			for (var i = 0; i < res.optDList.length; i++) {
-				var optD = res.optDList[i];
-				var append = "<tr class='" + (i & 1 ? "odd" : "even") + "'>\n" +
-					"<td>\n" +
-					"    <input name='optId' type='text' style='width: 100px;' readonly value='" + optD.optId + "' />\n" +
-					"</td>\n" +
-					"<td>\n" +
-					"    <input name='optDesc' type='text' style='width: 150px;' readonly value='" + optD.optDesc + "' />\n" +
-					"</td>\n" +
-					"<td>\n" +
-					"    <input name='noSel' type='text' style='width: 100px;' readonly value='" + ("Y"==optD.noSel ? "是" : "") + "' />\n" +
-					"</td>\n" +
-					"<td>\n" +
-					"    <input name='score' type='text' style='width: 100px; text-align: right;' readonly value='" + optD.score + "' />\n" +
-					"</td>\n" +
-					"<td>\n" +
-					"    <div style='width: 180px;'>\n" +
-					"    &nbsp;<button style='width: 80px;' " + queryHide + " onclick='optDMod(this);'>編輯</button>\n" +
-					"    &nbsp;<button style='width: 80px;' " + queryHide + " onclick='optDDel(this);'>刪除</button>\n" +
-					"    </div>\n" +
-					"</td>\n" +
-					"</tr>\n";
-					joptDList.append(append);
-			}
+			$("#optDList").datagrid("loadData", res.optDList);
 		}
 	}, "json");
 }
@@ -141,6 +126,8 @@ function qryOptMList(mode) {
 		if (!window.queryCond1 || window.queryCond1._job != 'ScMntOptm')
 			return;
 	}
+	$("#optDList").datagrid("loadData", []);
+	
 	for (var i in window.queryCond1)
 		if (i != "_job")
 			req[i] = window.queryCond1[i];
@@ -190,7 +177,6 @@ function qryOptMList(mode) {
 					var optClass = evt.data.row.find("[name='optClass']").val();
 					var optDesc = evt.data.row.find("[name='optDesc']").val();
 					var fract = evt.data.row.find("[name='fract']").val();
-//alert("on click class : optClass=" + optClass+", optDesc="+optDesc+", fract="+fract);
 					$("#selectOptClass").val(optClass);
 					$("#selectOptDesc").val(optDesc);
 					$("#selectFract").val(fract);
@@ -293,6 +279,91 @@ function delOptClass(src) {
 	});
 }
 
+function edatagridAct(src){
+	var act = src==1 ? 'saveRow' : src==2 ? 'cancelRow' : 'destroyRow' ;
+	$('#optDList').edatagrid(act);
+}
+
+function optDListFmt(value, row, index) {
+	return "<button type='button' style='width: 50px;' onclick='edatagridAct(1);' >確認</button> &nbsp;&nbsp;" +
+    "<button type='button' style='width: 50px;' onclick='edatagridAct(2);' >取消</button> &nbsp;&nbsp;" +
+    "<button type='button' style='width: 50px;' onclick='edatagridAct(3);' >刪除</button>" ;
+}
+
+function addOptItem(){
+	if( $("#selectOptClass").val()=="" ){
+		parent.showStatus({ status: '請先選擇評分類別！' });
+		return;
+	}
+	
+	$('#optDList').edatagrid('addRow');
+}
+
+function callModOptItems(req){
+	$.post("ScMntOptm_modOptItems", req, function (res) {
+		parent.showStatus(res);
+		if(res.success){
+			$( "#optMList input[value='"+req.optClass+"']" ).parent().parent().find("[name='dCnt']").val($("#optDList").datagrid("getData").rows.length)
+		}
+			
+	}, "json");
+}
+
+function saveOptItem(){
+	
+	var req = {};
+	req.optClass = $("#selectOptClass").val();
+	var optDesc = $("#selectOptDesc").val();
+	var fract = $("#selectFract").val();
+
+	if( req.optClass=="" ){
+		parent.showStatus({ status: '請先選擇評分類別！' });
+		return;
+	}
+	
+	alert( "optTypeStr=" + $( "#optMList input[value='"+req.optClass+"']" ).parent().parent().find("[name='dCnt']").val() );
+	
+	var optDList = $("#optDList").datagrid("getData").rows;
+	for (var i = 0; i < optDList.length; i++) {
+		if( $("#optDList").datagrid("isEditing", i)  ){
+			parent.showStatus({ status: '評分選項尚在編輯狀態，請先執行確認！' });
+			return;
+		}
+
+		var optD = optDList[i];
+		//var optId = optD.optId.toUpperCase();
+		req["optId[" + i + "]"] = optD.optId = optD.optId.toUpperCase();
+		req["optDesc[" + i + "]"] = optD.optDesc;
+		req["noSel[" + i + "]"] = optD.noSel;
+		req["score[" + i + "]"] = optD.score;
+
+		$("#optDList").datagrid("updateRow", { index: i, row: {optId:optD.optId, optDesc:optD.optDesc, noSel:optD.noSel, score:optD.scope} });
+		
+	}
+	
+	//$("#optDList").datagrid("updateRow", { index: 0, row: optDList[0] });
+	//$("#optDList").datagrid("updateRow", { index: 1, row: optDList[1] });
+	//$("#optDList").datagrid("updateRow", { index: 2, row: optDList[2] });
+	
+	
+	if( optDList.length != fract ){
+		$.messager.confirm({
+			title: '儲存確認',
+			msg: '評分級別(' + fract + ')與評分項目數量(' + optDList.length + ")不符，確定要儲存嗎？",
+			ok: '儲存',
+			cancel: '取消',
+			fn: function (ok) {
+				if (ok) {
+					callModOptItems(req);
+				}
+			}
+		});
+	} else {
+		callModOptItems(req);
+	}
+	
+}
+
 </script>
 </head>
 <body>
@@ -304,10 +375,10 @@ function delOptClass(src) {
 			<td>評分級別</td>
 			<td>選項區分</td>
 			<td rowspan="2">
-				<button type="button" style="width: 100px;" onclick="qryOptMList('N');">查詢評分類別</button>
+				<a class="easyui-linkbutton" style="width: 100px;" href="javascript:qryOptMList('N');">查詢評分類別</a>
 			</td>
 			<td rowspan="2">
-				<button type="button" style="width: 100px; ${queryHide}" onclick="addOptM();">新增評分類別</button>
+				<a class="easyui-linkbutton" style="width: 100px; ${queryHide}" href="javascript:addOptM();">新增評分類別</a>
 			</td>
 		</tr>
 		<tr>
@@ -372,29 +443,54 @@ function delOptClass(src) {
 		</table>
 	</div>
 </div>
+
 <input id="selectOptClass" type="hidden" />
 <input id="selectOptDesc" type="hidden" />
 <input id="selectFract" type="hidden" />
+
 <div style="float: left; margin: 5px 5px 0 30px;">
-	<div style="margin: 5px 0 5px 0; height: 25px;">
-		評分選項列表：
-		<button style="width: 100px;" ${queryHide} onclick="optDAdd();">新增評分項目</button>
+
+	<div style="width:646px; margin: 5px 0 5px 0; height: 25px;">
+		評分選項編輯：
+		<a href="javascript:addOptItem();" class="easyui-linkbutton" data-options="iconCls:'icon-add'" style="width: 80px;" ${queryHide} >加列</a>
+		<a class="easyui-linkbutton" data-options="iconCls:'icon-save'" style="width: 120px;float: right;" ${queryHide} href="javascript:saveOptItem();">儲存評分項目</a>
 	</div>
-	<div>
-		<table class="listHead">
-			<tr>
-				<td class="headCol1" style="width: 100px;">評分代碼</td>
-				<td class="headCol2" style="width: 150px;">評分說明</td>
-				<td class="headCol3" style="width: 100px;">不可選取</td>
-				<td class="headCol4" style="width: 100px;">答案分數</td>
-				<td class="headCol5" style="width: 180px;">編輯</td>
-			</tr>
+
+	<div style="width:650px;height:320px" >
+		<table id="optDList" class="easyui-datagrid" title="評分選項列表"  data-options="
+            singleSelect:true,
+            fit:true,
+            onLoadSuccess:function(){
+	                //$(this).datagrid('enableCellEditing');
+                	$(this).datagrid('enableDnd');
+                	$(this).edatagrid({});
+            	},
+            destroyMsg:{
+				norecord:{	// when no record is selected
+					title:'警告',
+					msg:'未選取項目'
+				},
+				confirm:{	// when select a row
+					title:'刪除項目確認',
+					msg:'確定要刪除這一個評分項目嗎？'
+				}
+				}
+        	">
+		    <thead>
+		        <tr>
+		            <th data-options="field:'optId',width:80,editor:{type:'textbox' ,options:{required:true,validType:{length:[1,3]}}}">評分代碼</th>
+		            <th data-options="field:'optDesc',width:210,editor:{type:'textbox' ,options:{required:true,validType:{length:[1,50]}}}">評分說明</th>
+		            <th data-options="field:'noSel',width:80,editor:{type:'combobox',options:{valueField:'id', textField:'text', editable:false,data:[{id:'是',text:'是'}, {id:'',text:'否'}]}}">不可選取</th>
+		            <th data-options="field:'score',width:80,align:'right',editor:{type:'numberbox',options:{required:true, precision:0}}">答案分數</th>
+		            <th data-options="field:'action',width:180,align:'center', formatter: optDListFmt">處理動作</th>
+		        </tr>
+		    </thead>
 		</table>
-	</div>
-	<div style="width: 646px; height: 400px; overflow: auto;">
-		<table id="optDList" class="listData">
-		</table>
-	</div>
+	</div>		
+		
+	<div style="margin: 5px 0 5px 0;">編輯說明：</div>
+	<div style="margin: 5px 0 5px 0;">1.雙擊評分項目啟動編輯模式</div>
+	<div style="margin: 5px 0 5px 0;">2.拉動評分項目可調整顯示順序</div>
 </div>
 
 <div id="optMEdit" class="easyui-dialog" style="width: 240px; height: 200px; display: none;"
@@ -438,55 +534,7 @@ function delOptClass(src) {
 		</table>
 	</div>
 </div>
-<div id="optDEdit" class="easyui-dialog" style="width: 350px; height: 420px; display: none;"
-	data-options="modal: true, title: '編輯評分項目', closed: true, onClose: optMEditClose">
-	<input id="optDEditMode" type="hidden" />
-	<div style="float: left; margin: 10px 0 0 10px;">
-		<table>
-			<tr>
-				<td>評分類別</td>
-				<td>
-					<input id="editOptClassD" class="easyui-textbox" style="width: 150px;" data-options="readonly: true"/>
-				</td>
-			</tr>
-			<tr>
-				<td>評分級別</td>
-				<td>
-					<input id="editFractD" class="easyui-textbox" style="width: 150px;" data-options="readonly: true" />
-				</td>
-			</tr>
-			<tr>
-				<td>評分代碼</td>
-				<td>
-					<input id="editOptIdD" class="easyui-textbox" style="width: 150px;" />
-				</td>
-			</tr>
-			<tr>
-				<td>評分說明</td>
-				<td>
-					<input id="editOptDescD" class="easyui-textbox" style="width: 150px;" />
-				</td>
-			</tr>
-			<tr>
-				<td>選取類別</td>
-				<td>
-					<input id="editNoSelD" class="easyui-switchbutton" style="width: 100px;" data-options="onText: '不可選取', offText: '可以選取'" />
-				</td>
-			</tr>
-			<tr>
-				<td>答案分數</td>
-				<td>
-					<input id="editScore" class="easyui-textbox" style="width: 150px;" />
-				</td>
-			</tr>
-			<tr>
-				<td colspan="2" style="text-align: center;">
-					<button type="button" style="width: 100px;" onclick="optDEditDone();">儲存評分項目</button>
-				</td>
-			</tr>
-		</table>
-	</div>
-</div>
+
 <input type="hidden" id="progId" value="${progId}" />
 <input type="hidden" id="privDesc" value="${privDesc}" />
 <input type="hidden" id="progTitle" value="${progTitle}" />

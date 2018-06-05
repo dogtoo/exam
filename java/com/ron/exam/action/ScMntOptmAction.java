@@ -31,34 +31,38 @@ public class ScMntOptmAction {
 
 	private static final String c_progId = "ScMntOptm";
 	
-	private static class EqpData {
-		public String eqpType;
-		public String eqpId;
-		public String eqpName;
-		public String fileName;
-		public String eqpConfig;
-		public String remark;
+	private static class OptData {
+		public String optClass;
+		public String optId;
+		public String optDesc;
+		public int showOrder;
+		public String noSel;
+		public int scope;
+		public int fract;
+		public String optType;
 		
-		public static String stringify(List<EqpData> eqpList) {
+		public static String stringify(List<OptData> optList) {
 			StringBuffer str = new StringBuffer();
-			for (int i = 0; i < eqpList.size(); i++) {
-				EqpData eqp = eqpList.get(i);
+			for (int i = 0; i < optList.size(); i++) {
+				OptData opt = optList.get(i);
 				if (i > 0)
 					str.append(',');
 				str.append('<');
-				str.append(eqp.eqpType);
+				str.append(opt.optClass);
 				str.append(',');
-				str.append(eqp.eqpId);
+				str.append(opt.optId);
 				str.append(',');
-				str.append(eqp.eqpName);
+				str.append(opt.optDesc);
 				str.append(',');
-				str.append(eqp.fileName);
+				str.append(opt.showOrder);
 				str.append(',');
-				str.append('[');
-				str.append(eqp.eqpConfig);
-				str.append(']');
+				str.append(opt.noSel);
 				str.append(',');
-				str.append(eqp.remark);
+				str.append(opt.scope);
+				str.append(',');
+				str.append(opt.fract);
+				str.append(',');
+				str.append(opt.optType);
 				str.append('>');
 			}
 			return str.toString();
@@ -272,7 +276,7 @@ public class ScMntOptmAction {
 				Map<String, Object> opt = new HashMap<String, Object>();
 				opt.put("optId", rsOpt.getString("opt_id"));
 				opt.put("optDesc", rsOpt.getString("opt_desc"));
-				opt.put("noSel", rsOpt.getString("no_sel"));
+				opt.put("noSel", "Y".equals( rsOpt.getString("no_sel") ) ? "是" : "");
 				opt.put("score", rsOpt.getString("score"));
 				optList.add(opt);
 			}
@@ -285,74 +289,6 @@ public class ScMntOptmAction {
 //		catch (StopException e) {
 //			res.put("status", e.getMessage());
 //		}
-		catch (SQLException e) {
-			res.put("status", DbUtil.exceptionTranslation(e));
-		}
-		catch (Exception e) {
-			res.put("status", ExceptionUtil.procExceptionMsg(e));
-		}
-		dbu.relDbConn();
-		
-		return res;
-	}
-
-	@RequestMapping(value = "/ScMntOptm_qryRoom", method = RequestMethod.POST)
-	public @ResponseBody Map<String, Object> qryRoom(@RequestParam Map<String, String> req) {
-		Map<String, Object> res = new HashMap<String, Object>();
-		res.put("status", "");
-		res.put("statusTime", new StdCalendar().toTimesString());
-
-		DbUtil dbu = new DbUtil();
-		try {
-			res.put("success", false);
-			
-			String roomId = req.get("roomId");
-			if (roomId != null) {
-				String sqlQryRoom =
-						  " SELECT room_id, room_name, room_desc, suspend, remark\n"
-						+ "   FROM exroom \n"
-						+ "  WHERE room_id = ?\n";
-
-					Map<String, Object> rowQs = dbu.selectMapRowList(sqlQryRoom, roomId);
-					if (rowQs == null)
-						throw new StopException("診間代碼 <" + roomId + "> 不存在");
-					res.put("roomName", rowQs.get("room_name"));
-					res.put("roomDesc", rowQs.get("room_desc"));
-					res.put("roomName", rowQs.get("room_name"));
-					res.put("suspend", rowQs.get("suspend"));
-					res.put("remark", rowQs.get("remark"));
-
-					String sqlQryEqp = 
-							" SELECT eqp_id, eqp_type, eqp_name, eqp_config, file_name, remark\n"
-						  + "   FROM exreqm a WHERE room_id = ? ORDER BY eqp_id";
-					Map<String, String> typeMap = CodeSvc.buildStringMapByKind(dbu, "EXEQPTYP");
-					List<Object> paramsu = new ArrayList<Object>();
-					paramsu.add(roomId);
-					ResultSet rsEqp = dbu.queryArray(sqlQryEqp.toString(), paramsu.toArray());			
-					List<Map<String, Object>> eqpList = new ArrayList<Map<String, Object>>();
-					while (rsEqp.next()) {					
-						Map<String, Object> eqp = new HashMap<String, Object>();
-						eqp.put("eqpTypeDesc",  typeMap.get(rsEqp.getString("eqp_type")));
-						eqp.put("eqpId", rsEqp.getString("eqp_id"));
-						eqp.put("eqpName", rsEqp.getString("eqp_name"));
-						eqp.put("eqpConfig", rsEqp.getString("eqp_config"));
-						eqp.put("fileName", rsEqp.getString("file_name"));
-						eqp.put("eqpType", rsEqp.getString("eqp_type"));
-						eqp.put("remark", rsEqp.getString("remark"));
-						eqpList.add(eqp);
-					}
-					rsEqp.close();
-					res.put("eqpList", eqpList);
-			}
-			
-			dbu.doCommit();
-			
-			res.put("success", true);
-			res.put("status", "查詢診間資料完成");
-		}
-		catch (StopException e) {
-			res.put("status", e.getMessage());
-		}
 		catch (SQLException e) {
 			res.put("status", DbUtil.exceptionTranslation(e));
 		}
@@ -546,6 +482,89 @@ public class ScMntOptmAction {
 			
             res.put("success", true);
 			res.put("status", "刪除評分類別完成");
+		}
+		catch (StopException e) {
+			res.put("status", e.getMessage());
+		}
+		catch (SQLException e) {
+			res.put("status", DbUtil.exceptionTranslation(e));
+		}
+		catch (Exception e) {
+			res.put("status", ExceptionUtil.procExceptionMsg(e));
+		}
+		dbu.relDbConn();
+		
+		return res;
+	}
+
+	@RequestMapping(value = "/ScMntOptm_modOptItems", method = RequestMethod.POST)
+	public @ResponseBody Map<String, Object> modOptItems(@RequestParam Map<String, String> req) {
+		Map<String, Object> res = new HashMap<String, Object>();
+		res.put("status", "");
+		res.put("statusTime", new StdCalendar().toTimesString());
+
+		DbUtil dbu = new DbUtil();
+		try {
+            res.put("success", false);
+			UserData ud = UserData.getUserData();
+			if (!ProgData.c_privBaseMaintain.equals(ud.getPrivBase(c_progId)))
+				throw new StopException("您無權限執行此動作");
+			
+			String optClass = req.get("optClass");
+			String sqlM = " SELECT opt_class, fract, opt_type FROM scoptm WHERE opt_class = ? and opt_id = '-'";
+			Map<String, Object> optm = dbu.selectMapRowList(sqlM, optClass);
+			if (optm == null)
+				throw new StopException("評分類別代碼不存在 '" + optClass + "' 不存在");
+			
+			String msg;
+			List<OptData> optList = new ArrayList<OptData>();
+			for (int i = 0; ; i++) {
+				OptData opt = new OptData();
+				opt.optClass = optClass;
+				opt.showOrder = i + 1;
+				opt.fract = (Integer)optm.get("fract");
+				opt.optType = (String)optm.get("opt_type");
+				
+				String key = "optId[" + i + "]";
+				if (!req.containsKey(key))
+					break;
+				opt.optId = req.get( key );				
+				if ((msg = MiscTool.checkIdString(opt.optId, 3)) != null)
+					throw new StopException("評分代碼 '" + opt.optId + "' " + msg);
+				
+				opt.optDesc = req.get("optDesc[" + i + "]");
+				if (opt.optDesc == null || opt.optDesc.isEmpty())
+					throw new StopException("評分代碼 '" + opt.optId + "' 評分項目說明不可以為空白！");
+				opt.noSel = "是".equals( req.get("noSel[" + i + "]") ) ? "Y" : null;
+				String scopeStr = req.get("score[" + i + "]");
+				if( !scopeStr.matches("^\\d+$") )
+					throw new StopException("評分代碼 '" + opt.optId + "' 答案分數須為數字！");
+				opt.scope = new Integer( scopeStr );
+				optList.add(opt);
+			}
+//System.out.println("OptData.stringify(optList)=" + OptData.stringify(optList));			
+			String sqlDel = "DELETE FROM scoptm WHERE opt_class = ? AND opt_id != '-' ";
+			dbu.executeList(sqlDel, optClass);
+			
+			
+			String sqlIns =
+					  " INSERT INTO scoptm(opt_class, opt_id, opt_desc, show_order, no_sel, score, fract, opt_type)\n"
+					+ " VALUES(?, ?, ?, ?, ?, ?, ?, ?)\n";
+			for(int i=0; i<optList.size(); i++){
+				OptData opt = optList.get(i);
+				dbu.executeList(sqlIns, opt.optClass, opt.optId, opt.optDesc, opt.showOrder, opt.noSel, opt.scope, opt.fract, opt.optType);
+			}
+			
+			
+			dbu.doCommit();
+			
+			OperLog operLog = new OperLog(c_progId, "modOptItems");
+			operLog.add("optClass", optClass);
+			operLog.add("optItems", OptData.stringify(optList));
+			operLog.write();
+			
+            res.put("success", true);
+			res.put("status", "儲存評分評分項目完成");
 		}
 		catch (StopException e) {
 			res.put("status", e.getMessage());

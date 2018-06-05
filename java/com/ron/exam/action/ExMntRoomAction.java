@@ -431,7 +431,7 @@ public class ExMntRoomAction {
 					throw new StopException("設備代碼 '" + eqp.eqpId + "' " + msg);
 				eqp.eqpName = req.get("eqpName[" + i + "]");
 				if (eqp.eqpName == null || eqp.eqpName.isEmpty())
-					throw new StopException("設備名稱不可以為空白");
+					throw new StopException("設備代碼 '" + eqp.eqpId + "' 設備名稱不可以為空白");
 				eqp.fileName = DbUtil.emptyToNull(req.get("fileName[" + i + "]"));
 				eqp.eqpConfig = DbUtil.emptyToNull(req.get("eqpConfig[" + i + "]"));
 				eqp.remark = DbUtil.emptyToNull(req.get("remark[" + i + "]"));

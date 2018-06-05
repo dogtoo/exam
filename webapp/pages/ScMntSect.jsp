@@ -93,15 +93,16 @@ function qryRddList() {
             if (res.success) {
                 var cols = [{}];
                 $("#maxRoom").val(res.maxRoom);
-                cols[0] = {field:'sectSeq',title:'節次/考場',align:'center',width:100};
+                cols[0] = {field:'sectText',title:'節次/考場',align:'center',width:100};
+                cols[1] = {field:'sectSeq',hidden:true};
                 var colLength = res.rddmList.length;
                 for (var i=1; i<=colLength; i++) {
-                	cols[i] = {field:'roomSeq'+i,title:'第' + i + '站',align:'center',width:100,
+                	cols[(i+1)] = {field:'roomSeq'+i,title:'第' + i + '站',align:'center',width:100,
                 			formatter:function(value,row,index){
                 				var s;
                 				var roomSeqNo = Object.keys(row).filter(function(key) {return row[key] === value})[0].match(/\d+/);
                 				if (paneBackup.progId[paneBackup.progId.length-2] == 'ScQryScore') {
-                					s = '<button class="easyui-linkbutton" onclick="parent.selProg(\'ScQryScore?rdId=' + rdId 
+                					s = '<button class="easyui-linkbutton" onclick="parent.selProg(\'ScSetScore?rdId=' + rdId 
                 					                                                                        + "&sectSeq=" + row.sectSeq
                 					                                                                        + "&roomSeq=" + roomSeqNo[0];
                 					$.each(paneBackup.progId, function(f,v) {

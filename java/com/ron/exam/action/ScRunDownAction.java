@@ -357,8 +357,8 @@ public class ScRunDownAction {
         int cnt = 0;
         int delCnt = 0;
         
-        String delRdrm = "DELETE FROM public.scrdrm WHERE rd_id = ?";
-        String instRdrm = "INSERT INTO public.scrdrm \n"
+        String delRdrm = "DELETE FROM scrdrm WHERE rd_id = ?";
+        String instRdrm = "INSERT INTO scrdrm \n"
                         + "    (rd_id, room_seq, qs_id, room_id, examiner, patient1, patient2, patient3) \n"
                         + "VALUES (?, ?, ?, ?, ?, ?, ?, ?) \n";
         String upRdmmStsR = "UPDATE scrdmm SET sts_r = ? WHERE rd_id = ? \n";
@@ -489,7 +489,7 @@ public class ScRunDownAction {
         
         String delSect = "DELETE FROM scrddm WHERE rd_id = ?";
         String instRddm = 
-                "INSERT INTO public.scrddm( "
+                "INSERT INTO scrddm( "
               + "    rd_id, room_seq, sect_seq, room_id, examiner, patient1, patient2, patient3, examinee) "
               + "VALUES "
               + "    (?, ?, ?, ?, ?, ?, ?, ?, ?);";
@@ -683,7 +683,7 @@ public class ScRunDownAction {
                 else
                 {
                     sqlUpRd = 
-                        "UPDATE public.scrdmm \n"
+                        "UPDATE scrdmm \n"
                       + "   SET rd_desc=? \n"
                       + "     , rd_date=?\n"
                       + "     , beg_time=?\n"
@@ -699,7 +699,7 @@ public class ScRunDownAction {
                     throw new StopException("請指定梯次代碼");
                 
                 String sqlDelRd =
-                        "DELETE FROM PUBLIC.SCRDMM"
+                        "DELETE FROM SCRDMM"
                       + " WHERE rd_Id = ?";
                 int cnt = dbu.executeList(sqlDelRd, rdId);
                 if (cnt == 0)

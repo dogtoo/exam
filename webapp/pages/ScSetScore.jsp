@@ -24,7 +24,19 @@
 }
 </style>
 <script type="text/javascript">
-
+var paneBackup = {};
+$(function(){
+	//把自已的作業名稱加上去讓下一個畫面知道返回是要回給誰，返回後所要帶的預設值
+    var paneBackupS = $("#paneBackup").val().replace(/\'/g, '"');
+    paneBackup = JSON.parse(paneBackupS);
+    paneBackup.progId.push('ScSetScore');
+    
+    var data = {};
+    data.rdId = $("#rdId").textbox('getText');
+    data.examinee = $("#examinee").combobox('getValue');
+    
+    paneBackup.ScSetScore = data;
+});
 /*
  * 查詢梯次。
  */
@@ -142,8 +154,8 @@ function qryItemList(index,row) {
 			//cols[idx] = {field: 'tip', hidden: true};
 			//cols[idx] = {field: 'tip', title: '評分說明', width:  65};
 			//idx++;
-		    //cols[idx] = {field: 'optClass', hidden: true};
-		    cols[idx] = {field: 'optClass', title: '級分', width:  65};
+		    cols[idx] = {field: 'optClass', hidden: true};
+		    //cols[idx] = {field: 'optClass', title: '級分', width:  65};
 		    idx++;
 		    
 		    var optLen = res.itemList[0].optClass.substr(1,1);
@@ -160,8 +172,8 @@ function qryItemList(index,row) {
 		    }
 		    idx = idx + i;
 		    
-		    //cols[idx] = {field: 'optId',   hidden: true};
-		    cols[idx] = {field: 'optId',    title: '評分級數', width:  60};
+		    cols[idx] = {field: 'optId',   hidden: true};
+		    //cols[idx] = {field: 'optId',    title: '評分級數', width:  60};
 		    idx++;
 		    cols[idx] = {field: 'comm',     title: '註記',     width:  65,
 					    	formatter:function(value, row, index){
@@ -238,12 +250,12 @@ function scoreEditDone() {
 function backProgId(bProgId) {
 	//要回到上一個畫面時要把 paneBackup.progId.pop()把最後一個刪除，也就是把自已刪掉
 	//刪掉後再把paneBackup['progId'] 裡面的參數返迴為預設查詢
-	/*paneBackup.progId.pop(); //[0]ScQry [1]ScMnt [2]ScSet(會被刪掉)
+	paneBackup.progId.pop(); //[0]ScQry [1]ScMnt [2]ScSet(會被刪掉)
 	var url = bProgId + "?1=1"; //準備回到 ScMnt
 	$.each(paneBackup[bProgId], function(f,v) {
 		url += "&" + f + "=" + v;
 	});//回到 ScMnt要執行的參數
-	
+	delete paneBackup[bProgId];//參數放好後也把放在p b up的刪掉
 	$.each(paneBackup.progId, function(f,v) { //要幫ScMnt打包 [0]ScQry
 	    if (v != bProgId) {
 		    url += "&p_b_progId["+ f +"]=" + v;
@@ -255,7 +267,7 @@ function backProgId(bProgId) {
 	    }
 	})
 
-	parent.selProg(url);*/
+	parent.selProg(url);
 }
 </script>
 </head>
@@ -361,16 +373,19 @@ function backProgId(bProgId) {
 <input type="hidden" id="queryHide"  value="${queryHide}" />
 <input type="hidden" id="status"     value="${status}" />
 <input type="hidden" id="statusTime" value="${statusTime}" />
+<!-- 應該不是這樣做 
 <input type="hidden" id="bProgId"    value="${bProgId}" />
 <input type="hidden" id="bRdId"      value="${bRdId}" />
 <input type="hidden" id="bSectSeq"   value="${bSectSeq}" />
 <input type="hidden" id="bRoomSeq"   value="${bRoomSeq}" />
 <input type="hidden" id="bExaminee"  value="${bExaminee}" />
+ -->
+<input type="hidden" id="paneBackup" value="${paneBackup}" />
 </body>
 <script type="text/javascript">
 parent.showProg({ id: $("#progId").val(), priv: $("#privDesc").val(), title: $("#progTitle").val() });
 parent.showStatus({ status: $("#status").val(), statusTime: $("#statusTime").val() });
 
-qryRdList();
+//qryRdList();
 </script>
 </html>

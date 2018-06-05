@@ -54,6 +54,9 @@ public class ScSetScoreAction {
 			res.put("queryHide", ProgData.c_privBaseQuery.equals(ud.getPrivBase(c_progId)) ? "visibility: hidden;" : "");
 
 			// 評分查詢 -> 梯次表 -> 評分表
+			String rdId = req.get("rdId");
+			String sectSeq = req.get("sectSeq");
+			String roomSeq = req.get("roomSeq");
 			String progId = null;
 			JSONObject paneBackup = new JSONObject();
 			// 紀錄跳頁的作業名稱，用List去存，最後一筆就會是呼叫本作業的作業名稱
@@ -64,27 +67,35 @@ public class ScSetScoreAction {
 					break;
 				progId = req.get(key);
 				progIdList.add(progId);
+				
+				Map<String, String> p_b_ = new HashMap<String, String>();
+                for (int p = 0; ; p++) {
+                    String p_b_key = "p_b_"+ progId +"[" + p + "]";
+                    if (!req.containsKey(p_b_key))
+                        break;
+                    String queryCol = req.get(p_b_key);
+                    String[] col = queryCol.split(":", -1);
+                    p_b_.put(col[0], col[1]);
+                }
+                paneBackup.put(progId, p_b_);
 			}
 			paneBackup.put(    "progId",  progIdList);
 			model.addAttribute("bProgId", progId);
+			model.addAttribute("rdId", rdId);
+			model.addAttribute("sectSeq", sectSeq);
+			model.addAttribute("roomSeq", roomSeq);
 
-			if ( progId != null && progId.length() != 0 ) {
-				String rdId     = req.get("rdId");
-				String sectSeq  = req.get("sectSeq");
-				String roomSeq  = req.get("roomSeq");
-				String examinee = req.get("examinee");
-				model.addAttribute("bRdId",     rdId);
-				model.addAttribute("bSectSeq",  sectSeq);
-				model.addAttribute("bRoomSeq",  roomSeq);
-				model.addAttribute("bExaminee", examinee);
-			}		
+			if (progId != null && progId.equals("ScMntSect")) {
+			    model.addAttribute("paneBackup", paneBackup.toString().replaceAll("\"", "'"));
+            }    
+			
 		}
 		catch (Exception e) {
 			res.put("status", ExceptionUtil.procExceptionMsg(e));
 		}
 		dbu.relDbConn();
 		
-		// 這啥?
+		// 這啥? 將前面放到res的資料轉到真的會放到畫面上的model
 		Iterator<Entry<String, Object>> resi = res.entrySet().iterator();
 		while (resi.hasNext()) {
 			Entry<String, Object> rese = resi.next();
@@ -107,7 +118,7 @@ public class ScSetScoreAction {
 			// 梯次清單
 			StringBuffer sqlQryRd = new StringBuffer(
 					  " SELECT rd_id, rd_desc \n"
-					+ "   FROM scrdmm \n"
+					+ "   FROM scrddm \n"
 					+ "  WHERE rd_id IN (SELECT rd_id \n"
 					+ "                    FROM scrddm \n"
 					+ "                   WHERE examiner = ?) \n"

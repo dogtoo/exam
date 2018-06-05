@@ -58,6 +58,17 @@ public class ScMntSectAction {
                     break;
                 progId = req.get(key);
                 progIdList.add(progId);
+                
+                Map<String, String> p_b_ = new HashMap<String, String>();
+                for (int p = 0; ; p++) {
+                    String p_b_key = "p_b_"+ progId +"[" + p + "]";
+                    if (!req.containsKey(p_b_key))
+                        break;
+                    String queryCol = req.get(p_b_key);
+                    String[] col = queryCol.split(":", -1);
+                    p_b_.put(col[0], col[1]);
+                }
+                paneBackup.put(progId, p_b_);
             }
             paneBackup.put("progId", progIdList);
             
@@ -66,19 +77,8 @@ public class ScMntSectAction {
             
             if (showType != null && !showType.isEmpty())
                 model.addAttribute("showType", showType);
-            else if (progId != null && progId.equals("ScRunDown")) {
+            else if (progId != null && progId.equals("ScRunDown"))
                 model.addAttribute("showType", "S");
-                Map<String, String> p_b_ScRunDown = new HashMap<String, String>();
-                for (int i = 0; ; i++) {
-                    String key = "p_b_ScRunDown[" + i + "]";
-                    if (!req.containsKey(key))
-                        break;
-                    String queryCol = req.get(key);
-                    String[] col = queryCol.split(":", -1);
-                    p_b_ScRunDown.put(col[0], col[1]);
-                }
-                paneBackup.put("ScRunDown", p_b_ScRunDown);
-            }            
             else
                 model.addAttribute("showType", "R");
             //System.out.println(paneBackup.toString());
@@ -147,7 +147,8 @@ public class ScMntSectAction {
         for (int i=0; i<maxSect; i++){
             List<Map<String, Object>> rowSect = dbu.selectMapAllList(sqlQryRd, rdId, (i+1));
             Map<String, Object> rowData = new HashMap<String, Object>();
-            rowData.put("sectSeq", "第 " + (i+1) + " 節");
+            rowData.put("sectText", "第 " + (i+1) + " 節");
+            rowData.put("sectSeq", (i+1));
             int r = 1;
             for (Map<String, Object> sect : rowSect){
                 rowData.put("roomSeq" + r, sect.get("name"));
@@ -190,7 +191,8 @@ public class ScMntSectAction {
                 
                 Map<String, Object> rowData = new HashMap<String, Object>();
                 int r = 1;
-                rowData.put("sectSeq", "第 " + (i+2) + " 節"); //這邊是做節次2之後的 
+                rowData.put("sectText", "第 " + (i+2) + " 節"); //這邊是做節次2之後的
+                rowData.put("sectSeq", (i+2));
                 for (int idx: c) {
                     //System.out.println(rowRddms.get(0).get("roomSeq"+(idx+1) ));
                     rowData.put("roomSeq" + r, rowRddms.get(0).get("roomSeq"+(idx+1)));
@@ -225,7 +227,7 @@ public class ScMntSectAction {
         int cnt = 0;
         String sqlDelRddm = "DELETE FROM scrddm WHERE rd_id = ? ";
         String sqlInsRddm = 
-                  "INSERT INTO public.scrddm( "
+                  "INSERT INTO scrddm( "
                 + "    rd_id, room_seq, sect_seq, room_id, examiner "
                 + "  , patient1, patient2, patient3, examinee) "
                 + "VALUES "
