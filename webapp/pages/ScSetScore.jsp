@@ -25,18 +25,24 @@
 </style>
 <script type="text/javascript">
 var paneBackup = {};
+var opt = {};
 $(function(){
 	//把自已的作業名稱加上去讓下一個畫面知道返回是要回給誰，返回後所要帶的預設值
-    var paneBackupS = $("#paneBackup").val().replace(/\'/g, '"');
-    paneBackup = JSON.parse(paneBackupS);
-    paneBackup.progId.push('ScSetScore');
-    
     var data = {};
-    data.rdId = $("#rdId").textbox('getText');
-    data.examinee = $("#examinee").combobox('getValue');
-    
-    paneBackup.ScSetScore = data;
-    
+    data.rdId = $("#rdIdH").val();
+    data.examinee = $("#examinee").val();
+	
+	var paneBackupS = $("#paneBackup").val().replace(/\'/g, '"');
+	if (paneBackupS != null) {
+	    paneBackup = JSON.parse(paneBackupS);
+	    paneBackup.progId.push('ScSetScore');
+	    paneBackup.ScSetScore = data;
+	}
+	
+	$("#qsName").textbox({
+	    readonly: true
+	});
+	
     $("#rdId").combogrid({
     	panelWidth:301,
     	idField:'fRdId',
@@ -51,7 +57,7 @@ $(function(){
                 dataType: 'json',
                 success: function(res) {
                     if (res.success)
-                        success(res.userList);
+                        success(res.exList);
                     else
                         return false;
                     $("#examiner").val('');
@@ -59,10 +65,25 @@ $(function(){
             });
         },
         columns:[[
-            {field:'fRdId',   title:'代碼', width: 100},
-            {field:'fRdDesc', title:'名稱', width: 200},
+            {field:'fRdId',   title:'梯次', width: 100},
+            {field:'fRdDesc', title:'梯次說明', width: 200},
         ]]
     });
+    
+    $("#examineeText").combogrid({
+        panelWidth:241,
+        idField:'fExaminee',
+        textField:'fExaminee',
+        onClickRow: qryItemList,
+        columns:[[
+            {field:'fSectSeq',  title:'節次', width:  40},
+            {field:'fExaminee', title:'考生', width: 100},
+            {field:'fRoomSeq',  title:'站別', width:  40},
+            {field:'fTime',     title:'時間', width:  60},
+        ]]
+	});
+    
+    qryItemList();
 });
 /*
  * 查詢梯次。
@@ -70,6 +91,8 @@ $(function(){
 function qryRdList() {
 	var req = {};
 	req.userId = parent.$("#userId").val();
+	req.rdId = $("#rdId").val();
+	req.examinee
 	$.post("ScSetScore_qryRdList", req, function (res) {
 		parent.showStatus(res);
 		if (res.success) {
@@ -144,6 +167,7 @@ function qryExList(index,row) {
 function qryItemList(index,row) {
 	var req = {};
 	// 評分查詢 -> 梯次表 -> 評分表
+	/*
 	if ( $("#bProgId").val().length != 0 ) {
 		req.rdId    = $("#bRdId").val();
 		req.roomSeq = $("#bRoomSeq").val();
@@ -152,88 +176,70 @@ function qryItemList(index,row) {
 		req.rdId    = $('#rdId').combogrid('getValue');
 		req.roomSeq = row.fRoomSeq;
 		req.sectSeq = row.fSectSeq;
-	}
-	$.post("ScSetScore_qryItemList", req, function (res) {
-		parent.showStatus(res);
-		if (res.success) {
-			
-			var optDesc3 = ["完全做到", "部份做到", "沒有做到"];
-			var optDesc5 = [5,4,3,2,1];
-			
-			var cols = [];
-			var idx  = 0;
-			cols[idx] = {field: 'itemNo',   title: '編號',     width:  80};
-			idx++;
-			cols[idx] = {field: 'itemDesc', title: '項目說明',     width: 690};
-			idx++;
-			cols[idx] = {field: 'tipPic',   title: '評分說明', width:  65,
-					    	//formatter: clickTip
-					    		//function(value, row, index){
-					    		//return '<button onclick="clickTip(this);"><img src="images/i.png" style="width: 15px;"></button>';
-					    	//}
-					    	formatter:function(value, row, index){
-					    		return '<button onclick="clickTip(this)">檢視</button>'
-					    			 + "<input type='hidden' name='tip' value='" + row.tip + "' />" ;
-					    	}
-					    	
-					    };
-			idx++;
-			//cols[idx] = {field: 'tip', hidden: true};
-			//cols[idx] = {field: 'tip', title: '評分說明', width:  65};
-			//idx++;
-		    cols[idx] = {field: 'optClass', hidden: true};
-		    //cols[idx] = {field: 'optClass', title: '級分', width:  65};
-		    idx++;
-		    
-		    var optLen = res.itemList[0].optClass.substr(1,1);
-		    
-		    var optTitle;
-			if (optLen == 3 )
-				optTitle = optDesc3;
-			else if (optLen == 5)
-				optTitle = optDesc5;
-		    
-		    var i = 0;
-		    for (i; i < optLen ; i++) {
-		    	cols[i+idx] = {field: 'optClass' + i,    title: optTitle[i], width:  65};
-		    }
-		    idx = idx + i;
-		    
-		    cols[idx] = {field: 'optId',   hidden: true};
-		    //cols[idx] = {field: 'optId',    title: '評分級數', width:  60};
-		    idx++;
-		    cols[idx] = {field: 'comm',     title: '註記',     width:  65,
-					    	formatter:function(value, row, index){
-					    		return '<button onclick="editComm()">編輯</button>';
-					    	}
-					    };
-		    idx++;
-		    cols[idx] = {field: 'pic',      title: '考官塗鴉', width:  65,
-					    	formatter:function(value, row, index){
-					    		return '<button onclick="editPic()">編輯</button>';
-					    	}
-					    };
-		    idx++;
-			
-		    $("#itemList").datagrid({
-		        width:  '100%',
-		        height: '100%',
-		        singleSelect:true,
-		        idField:'fItemNo',
-		        //pagination: true,
-		        pagePosition: 'top',
-		        columns: [cols],
-
-		    });
-
-			$("#itemList").datagrid("loadData", res.itemList);
-			$("#optId" ).combobox(  "loadData", res.optIdList);
-			$("#result").combobox(  "loadData", res.resList);
-			$("#optId" ).combobox(  "setValue", res.optId);
-			$('#score' ).textbox(   "setValue", res.score);
-			$('#result').combobox(  "setValue", res.result);
-		}
-	}, "json");
+	}*/
+	
+	$.ajax({
+        type: 'POST',
+        url: 'ScSetScore_qryScore',
+        data: {'rdId': $("#rdIdH").val(), 'roomSeq': $("#roomSeq").val() ,'sectSeq': $("#sectSeq").val()},
+        dataType: 'json',
+        success: function(res){
+            parent.showStatus(res);
+            if (res.success) {
+                var optClassKey = Object.keys(res.opt)[0];
+                opt = res.opt;
+                var cols = [];
+            	var idx  = 0;
+            	cols[idx] = {field: 'itemNo',   title: '編號',     width:  80}; idx++;
+            	cols[idx] = {field: 'itemDesc', title: '項目說明',     width: 690}; idx++;
+            	cols[idx] = {field: 'tip',   title: '評分說明', width:  65,
+            			    	formatter:function(value, row, index){
+            			    		return '<button onclick="clickTip(this)">檢視</button>'
+            			    			 + "<input type='hidden' name='tip' value='" + row.tip + "' />" ;
+            			    	}}; idx++;
+                cols[idx] = {field: 'optClass', hidden: true}; idx++;
+                for (var i=0; i < res.opt[optClassKey].length ; i++) {
+                    for (var j=0; j<res.itemList.length; j++) {
+                    	res.itemList[j]['optClass' + res.opt[optClassKey][i].optId] = i;
+                    }
+                	cols[i+idx] = {field: 'optClass' + res.opt[optClassKey][i].optId, title: res.opt[optClassKey][i].optDesc, width:  65,
+                	        formatter:function(value, row, index){
+                	            var r = '';
+                	            if (!opt[row.optClass][value].noSel) {
+                	                if (opt[row.optClass][value].optId == row.optId)
+                	                	r = '<input type="radio" name="optIdRadio'+index+'" value="'+opt[row.optClass][value].optId+'" checked>';
+                	                else
+                	                    r = '<input type="radio" name="optIdRadio'+index+'" value="'+opt[row.optClass][value].optId+'">';
+                	            }
+        			    		return r ;
+        			    	}};
+                }
+                idx = idx + res.opt[optClassKey].length;
+                
+                cols[idx] = {field: 'optId',   hidden: true}; idx++;
+                cols[idx] = {field: 'comm',     title: '註記',     width:  65,
+            			    	formatter:function(value, row, index){
+            			    		return '<button onclick="editComm()">編輯</button>';
+            			    	}}; idx++;
+                cols[idx] = {field: 'pic',      title: '考官塗鴉', width:  65,
+            			    	formatter:function(value, row, index){
+            			    		return '<button onclick="editPic()">編輯</button>';
+            			    	}}; idx++;
+                
+                $("#itemList").datagrid({
+                    width:  '100%',
+                    height: '100%',
+                    singleSelect:true,
+                    idField:'fItemNo',
+                    columns: [cols],
+                    data: res.itemList
+                });
+                
+            }
+        }
+     
+    });
+	
 }
 
 function editComm() {
@@ -306,25 +312,19 @@ function backProgId(bProgId) {
 				<td>
 					梯次：
 					<input id="rdId" class="easyui-combogrid" style="width:105px;" value="${rdId}"/>
+					<input id="rdIdH" type="hidden" value="${rdId}"/>
 				</td>
 				<td style="width: 180px; text-align: right;">
 					教案：
-				    <input id="qsName" type='text' class="easyui-textbox" style="width: 100px;" data-options="readonly: true"/>
+				    <input id="qsName" type='text' class="easyui-textbox" style="width: 100px;" value="${qsName}"/>
+				    <input id="qsId" type="hidden" value="${qsId}"/>
+				    <input id="roomSeq" type="hidden" value="${roomSeq}"/>
 				</td>
 				<td style="width: 180px; text-align: right;">
 					考生：
-					<input id="examinee" class="easyui-combogrid" style="width:120px;" value="${examinee}"
-				        data-options="panelWidth:241, idField:'fExaminee', textField:'fExaminee', onClickRow: qryItemList,
-				            columns:[[
-				                {field:'fSectSeq',  title:'節次', width:  40},
-				                {field:'fExaminee', title:'考生', width: 100},
-				                {field:'fRoomSeq',  title:'站別', width:  40},
-				                {field:'fTime',     title:'時間', width:  60},
-				            ]]">
-				    </input>
-				    <input type="hidden" id="pExaminee" value="${pExaminee}"/>
-				    <input type="hidden" id="sectSeq"   value="${sectSeq}"/>
-				    <input type="hidden" id="roomSeq"   value="${roomSeq}"/>
+					<input id="examineeText" class="easyui-combogrid" style="width:120px;" value="${examineeText}"/>
+				    <input type="hidden" id="examinee" value="${examinee}"/>
+				    <input id="sectSeq" type="hidden" value="${sectSeq}"/>
 				</td>
 				<td style="width: 60px; text-align: right;">
 					<button id="editModBut" type="button" style="width: 50px;" onclick="editComm();">註記</button>
