@@ -130,7 +130,7 @@ public class ScRunDownAction {
                 + "                        where a.rd_id = b.rd_id "
                 + "                          and b.rd_id != ?"
                 + "                          and b.rd_date = ?) "*/
-                + "   and (coalesce(?, '') = '' OR room_id like ? || '%' OR room_name like ? || '%'); \n";
+                + "   and (coalesce(?, '') = '' OR room_id like '%' || ? || '%' OR room_name like '%' || ? || '%'); \n";
             //List<Map<String, Object>> roomList = dbu.selectMapAllList(sqlRoom, rdId, rdDate, param, param, param);
             List<Map<String, Object>> roomList = dbu.selectMapAllList(sqlRoom, param, param, param);
             if (roomList.size() == 0)
@@ -181,7 +181,7 @@ public class ScRunDownAction {
                         + "                        where a.rd_id = b.rd_id \n"
                         + "                          and b.rd_id != ? \n"
                         + "                          and b.rd_date = ?) \n"*/
-                        + "   and (coalesce(?, '') = '' OR user_id like ? || '%' OR user_name like ? || '%'); \n";
+                        + "   and (coalesce(?, '') = '' OR user_id like '%' || ? || '%' OR user_name like '%' || ? || '%'); \n";
                 //userList = dbu.selectMapAllList(sqlUser, rdId, rdDate, param, param, param);
                 userList = dbu.selectMapAllList(sqlUser, param, param, param);
             }
@@ -210,7 +210,7 @@ public class ScRunDownAction {
                         + "                        where a.rd_id = b.rd_id \n"
                         + "                          and b.rd_id != ? \n"
                         + "                          and b.rd_date = ? ) \n"*/
-                        + "   and (coalesce(?, '') = '' OR user_id like ? || '%' OR user_name like ? || '%'); \n";
+                        + "   and (coalesce(?, '') = '' OR user_id like '%' || ? || '%' OR user_name like '%' || ? || '%'); \n";
                 //userList = dbu.selectMapAllList(sqlUser, rdId, rdDate, rdId, rdDate, rdId, rdDate, param, param, param);
                 userList = dbu.selectMapAllList(sqlUser, param, param, param);
             }

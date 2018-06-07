@@ -49,7 +49,7 @@ $(function(){
     	textField:'fRdName',
     	mode: 'remote',
         loader: function(param,success,error){
-            data = {'rdId': param.q};
+            data = {'rdId': param.q, 'userId': parent.$("#userId").val()};
             $.ajax({
                 url: 'ScSetScore_qryExList',
                 type: 'POST',
