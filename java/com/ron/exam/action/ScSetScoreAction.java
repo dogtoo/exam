@@ -400,7 +400,8 @@ select b.qs_name  from scrddm a, qsmstr b where a.qs_id = b.qs_id and rd_id = '2
 	        res.put("result", rowTot.get("result"));*/
 	        
 	        // 把同類型的級分資料轉給畫面
-	        Map<String, Object> opt = qryOpt("M5", dbu);
+			String optClass = (String) itemList.get(0).get("optClass");
+	        Map<String, Object> opt = qryOpt(optClass.substring(0, 2), dbu);
 	        res.put("opt", opt);
 
 			res.put("success", true);
