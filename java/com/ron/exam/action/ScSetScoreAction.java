@@ -54,7 +54,7 @@ public class ScSetScoreAction {
 			res.put("queryHide", ProgData.c_privBaseQuery.equals(ud.getPrivBase(c_progId)) ? "visibility: hidden;" : "");
 
 			// 評分查詢 -> 梯次表 -> 評分表
-			String rdId = req.get("rdId");
+			String rdId = (req.get("rdId")!=null)? req.get("rdId") : "";
 			String sectSeq = (req.get("sectSeq")!=null)? req.get("sectSeq") : "";
 			String roomSeq = (req.get("roomSeq")!=null)? req.get("roomSeq") : "";
 			String progId = null;
@@ -81,7 +81,18 @@ public class ScSetScoreAction {
 			}
 			paneBackup.put(    "progId",  progIdList);
 			model.addAttribute("bProgId", progId);
-			model.addAttribute("rdId", rdId);
+			
+			if (!rdId.equals("")) {
+			    // 梯次清單
+	            StringBuffer sqlQryRd = new StringBuffer(
+	                    "SELECT rd_desc \n"
+	                  + "  FROM scrdmm \n"
+	                  + " WHERE rd_id = ? \n");
+	            String rdDesc = dbu.selectStringList(sqlQryRd.toString(), rdId);
+	            
+	            model.addAttribute("rdId", rdId);
+	            model.addAttribute("rdDesc", rdDesc);
+			}
 			
 			//是別的畫面跳過來的要做預先查詢
 			if (!sectSeq.equals("") && !roomSeq.equals("")) {
@@ -161,12 +172,17 @@ public class ScSetScoreAction {
 
 			// 梯次清單
 			StringBuffer sqlQryRd = new StringBuffer(
-					  " SELECT rd_id, rd_desc \n"
-					+ "   FROM scrddm \n"
-					+ "  WHERE rd_id IN (SELECT rd_id \n"
-					+ "                    FROM scrddm \n"
-					+ "                   WHERE examiner = ?) \n"
-					//+ "    AND A.rd_date  = TO_CHAR(current_date,'YYYYMMDD') \n"
+			        "SELECT rd_id, rd_desc, (select room_seq \n "
+			                + "                          from scrddm b \n "
+			                + "                         where a.rd_id = b.rd_id \n "
+			                + "                           and examiner = ? \n "
+			                + "                         group by room_seq) room_seq \n "
+			                + "  FROM scrdmm a \n "
+			                + " WHERE rd_id IN (SELECT rd_id \n "
+			                + "                   FROM scrddm \n "
+			                + "                  WHERE examiner = ? \n "
+			                + "                    AND rd_date = to_char(current_date,'YYYYMMDD') \n "
+			                + " );"
 					);
 			List<Object> params = new ArrayList<Object>();
 			params.add(qryUserId);
