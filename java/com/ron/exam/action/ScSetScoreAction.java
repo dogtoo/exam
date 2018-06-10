@@ -35,40 +35,40 @@ import com.ron.exam.service.UserData;
 @Controller
 public class ScSetScoreAction {
 
-	private static final String c_progId = "ScSetScore";
-	
-	@RequestMapping(value = "/ScSetScore", method = RequestMethod.GET)
-	//public String execute(Model model, HttpSession sess) {
-	public String execute(Model model, @RequestParam Map<String, String> req) {
-		Map<String, Object> res = new HashMap<String, Object>();
-		DbUtil dbu = new DbUtil();
-		try {
-			res.put("status", "");
-			res.put("statusTime", new StdCalendar().toTimesString());
-			
-			UserData ud = UserData.getUserData();
-			ProgData pd = ProgData.getProgData();
-			res.put("progId",    c_progId);
-			res.put("privDesc",  ud.getPrivDesc(c_progId));
-			res.put("progTitle", pd.getProgTitle(c_progId));
-			res.put("queryHide", ProgData.c_privBaseQuery.equals(ud.getPrivBase(c_progId)) ? "visibility: hidden;" : "");
+    private static final String c_progId = "ScSetScore";
+    
+    @RequestMapping(value = "/ScSetScore", method = RequestMethod.GET)
+    //public String execute(Model model, HttpSession sess) {
+    public String execute(Model model, @RequestParam Map<String, String> req) {
+        Map<String, Object> res = new HashMap<String, Object>();
+        DbUtil dbu = new DbUtil();
+        try {
+            res.put("status", "");
+            res.put("statusTime", new StdCalendar().toTimesString());
+            
+            UserData ud = UserData.getUserData();
+            ProgData pd = ProgData.getProgData();
+            res.put("progId",    c_progId);
+            res.put("privDesc",  ud.getPrivDesc(c_progId));
+            res.put("progTitle", pd.getProgTitle(c_progId));
+            res.put("queryHide", ProgData.c_privBaseQuery.equals(ud.getPrivBase(c_progId)) ? "visibility: hidden;" : "");
 
-			// 評分查詢 -> 梯次表 -> 評分表
-			String rdId = (req.get("rdId")!=null)? req.get("rdId") : "";
-			String sectSeq = (req.get("sectSeq")!=null)? req.get("sectSeq") : "";
-			String roomSeq = (req.get("roomSeq")!=null)? req.get("roomSeq") : "";
-			String progId = null;
-			JSONObject paneBackup = new JSONObject();
-			// 紀錄跳頁的作業名稱，用List去存，最後一筆就會是呼叫本作業的作業名稱
-			List<String> progIdList = new ArrayList<String>();
-			for (int i = 0; ; i++) {
-				String key = "p_b_progId[" + i + "]";
-				if (!req.containsKey(key))
-					break;
-				progId = req.get(key);
-				progIdList.add(progId);
-				
-				Map<String, String> p_b_ = new HashMap<String, String>();
+            // 評分查詢 -> 梯次表 -> 評分表
+            String rdId = (req.get("rdId")!=null)? req.get("rdId") : "";
+            String sectSeq = (req.get("sectSeq")!=null)? req.get("sectSeq") : "";
+            String roomSeq = (req.get("roomSeq")!=null)? req.get("roomSeq") : "";
+            String progId = null;
+            JSONObject paneBackup = new JSONObject();
+            // 紀錄跳頁的作業名稱，用List去存，最後一筆就會是呼叫本作業的作業名稱
+            List<String> progIdList = new ArrayList<String>();
+            for (int i = 0; ; i++) {
+                String key = "p_b_progId[" + i + "]";
+                if (!req.containsKey(key))
+                    break;
+                progId = req.get(key);
+                progIdList.add(progId);
+                
+                Map<String, String> p_b_ = new HashMap<String, String>();
                 for (int p = 0; ; p++) {
                     String p_b_key = "p_b_"+ progId +"[" + p + "]";
                     if (!req.containsKey(p_b_key))
@@ -78,44 +78,54 @@ public class ScSetScoreAction {
                     p_b_.put(col[0], col[1]);
                 }
                 paneBackup.put(progId, p_b_);
-			}
-			paneBackup.put(    "progId",  progIdList);
-			model.addAttribute("bProgId", progId);
-			
-			if (!rdId.equals("")) {
-			    // 梯次清單
-	            StringBuffer sqlQryRd = new StringBuffer(
-	                    "SELECT rd_desc \n"
-	                  + "  FROM scrdmm \n"
-	                  + " WHERE rd_id = ? \n");
-	            String rdDesc = dbu.selectStringList(sqlQryRd.toString(), rdId);
-	            
-	            model.addAttribute("rdId", rdId);
-	            model.addAttribute("rdDesc", rdDesc);
-			}
-			
-			//是別的畫面跳過來的要做預先查詢
-			if (!sectSeq.equals("") && !roomSeq.equals("")) {
-			    model.addAttribute("sectSeq", sectSeq); //對到考生
-	            model.addAttribute("roomSeq", roomSeq); //對到教案
-			    
-    			//查考生 S
-    			Map<String, String> qryExaminee = new HashMap<String, String>();
-    			qryExaminee.put("rdId", rdId);
-    			qryExaminee.put("sectSeq", sectSeq);
-    			qryExaminee.put("roomSeq", roomSeq);
-    			qryExaminee.put("qryType", "SCRDDM");
-    			ScRunDownAction scRunDown = new ScRunDownAction();
-    			List<Map<String,Object>> rowRddmList = new ArrayList<Map<String,Object>>();
-    			rowRddmList = scRunDown.qryRdrmList(qryExaminee, dbu);
-    			if (rowRddmList.size() == 0)
+            }
+            paneBackup.put(    "progId",  progIdList);
+            model.addAttribute("bProgId", progId);
+            
+            if (!rdId.equals("")) {
+                // 梯次清單
+                StringBuffer sqlQryRd = new StringBuffer(
+                        "SELECT rd_desc \n"
+                      + "  FROM scrdmm \n"
+                      + " WHERE rd_id = ? \n");
+                String rdDesc = dbu.selectStringList(sqlQryRd.toString(), rdId);
+                
+                model.addAttribute("rdId", rdId);
+                model.addAttribute("rdDesc", rdDesc);
+            }
+            
+            //是別的畫面跳過來的要做預先查詢
+            if (!sectSeq.equals("") && !roomSeq.equals("")) {
+                model.addAttribute("sectSeq", sectSeq); //對到考生
+                model.addAttribute("roomSeq", roomSeq); //對到教案
+                
+                //查考生 S
+                Map<String, String> qryExaminee = new HashMap<String, String>();
+                qryExaminee.put("rdId", rdId);
+                qryExaminee.put("sectSeq", sectSeq);
+                qryExaminee.put("roomSeq", roomSeq);
+                qryExaminee.put("qryType", "SCRDDM");
+                ScRunDownAction scRunDown = new ScRunDownAction();
+                List<Map<String,Object>> rowRddmList = new ArrayList<Map<String,Object>>();
+                rowRddmList = scRunDown.qryRdrmList(qryExaminee, dbu);
+                if (rowRddmList.size() == 0)
                     throw new StopException("查無考生資料");
                 Map<String,Object> rowRddm = new HashMap<String,Object>();
                 rowRddm = rowRddmList.get(0);
                 String examineeText = (rowRddm.get("examineeName")!=null)? (String)rowRddm.get("examineeName") : "";
-                String examinee = (rowRddm.get("examinee")!=null)? (String) rowRddm.get("examinee") : "";     
+                String examinee = (rowRddm.get("examinee")!=null)? (String) rowRddm.get("examinee") : "";
+                String score = (rowRddm.get("score")!=null)? (Integer)rowRddm.get("score") + "" : "";
+                String result = (rowRddm.get("result")!=null)? (String) rowRddm.get("result") : "";
+                String optId = (rowRddm.get("optId")!=null)? (String) rowRddm.get("optId") : "";
+                String examComm = (rowRddm.get("examComm")!=null)? (String) rowRddm.get("examComm") : "";
+                String examPic = (rowRddm.get("examPic")!=null)? (String) rowRddm.get("examPic") : "";
                 model.addAttribute("examineeText", examineeText);
                 model.addAttribute("examinee", examinee);
+                model.addAttribute("score", score);
+                model.addAttribute("result", result);
+                model.addAttribute("optId", optId);
+                model.addAttribute("examComm", examComm);
+                model.addAttribute("examPic", examPic);
                 //查考生 E
                 
                 //查教案
@@ -133,169 +143,175 @@ public class ScSetScoreAction {
                 String qsId = (rowRdrm.get("qsId")!=null)? (String) rowRdrm.get("qsId") : ""; 
                 model.addAttribute("qsName", qsName);
                 model.addAttribute("qsId", qsId);
-			}
+            }
 
-			if (progId != null && progId.equals("ScMntSect")) {
-			    model.addAttribute("paneBackup", paneBackup.toString().replaceAll("\"", "'"));
-            }    
-		}
+            if (progId != null && progId.equals("ScMntSect")) {
+                model.addAttribute("paneBackup", paneBackup.toString().replaceAll("\"", "'"));
+            }  
+            
+            // 考試結果清單
+            //res.put("resList", CodeSvc.buildSelectDataByKind(dbu, "SCRESU", false)); 
+        }
         catch (StopException e) {
             res.put("status", e.getMessage());
         }
         catch (SQLException e) {
             res.put("status", DbUtil.exceptionTranslation(e));
         }
-		catch (Exception e) {
-			res.put("status", ExceptionUtil.procExceptionMsg(e));
-		}
-		dbu.relDbConn();
-		
-		// 這啥? 將前面放到res的資料轉到真的會放到畫面上的model
-		Iterator<Entry<String, Object>> resi = res.entrySet().iterator();
-		while (resi.hasNext()) {
-			Entry<String, Object> rese = resi.next();
-			model.addAttribute(rese.getKey(), rese.getValue());
-		}
-		return "ScSetScore";
-	}
+        catch (Exception e) {
+            res.put("status", ExceptionUtil.procExceptionMsg(e));
+        }
+        dbu.relDbConn();
+        
+        // 這啥? 將前面放到res的資料轉到真的會放到畫面上的model
+        Iterator<Entry<String, Object>> resi = res.entrySet().iterator();
+        while (resi.hasNext()) {
+            Entry<String, Object> rese = resi.next();
+            model.addAttribute(rese.getKey(), rese.getValue());
+        }
+        return "ScSetScore";
+    }
 
-	@RequestMapping(value = "/ScSetScore_qryRdList", method = RequestMethod.POST)
-	public @ResponseBody Map<String, Object> qryRdList(@RequestParam Map<String, String> req) {
-		Map<String, Object> res = new HashMap<String, Object>();
-		res.put("status", "");
-		res.put("statusTime", new StdCalendar().toTimesString());
+    // 查梯次的選單
+    @RequestMapping(value = "/ScSetScore_qryRdList", method = RequestMethod.POST)
+    public @ResponseBody Map<String, Object> qryRdList(@RequestParam Map<String, String> req) {
+        Map<String, Object> res = new HashMap<String, Object>();
+        res.put("status", "");
+        res.put("statusTime", new StdCalendar().toTimesString());
 
-		DbUtil dbu = new DbUtil();
-		try {	
-			res.put("success",  false);
-			String qryUserId = req.get("userId");
+        DbUtil dbu = new DbUtil();
+        try {    
+            res.put("success",  false);
+            String qryUserId = req.get("userId");
 
-			// 梯次清單
-			StringBuffer sqlQryRd = new StringBuffer(
-			        "SELECT rd_id, rd_desc, (select room_seq \n "
-			                + "                          from scrddm b \n "
-			                + "                         where a.rd_id = b.rd_id \n "
-			                + "                           and examiner = ? \n "
-			                + "                         group by room_seq) room_seq \n "
-			                + "  FROM scrdmm a \n "
-			                + " WHERE rd_id IN (SELECT rd_id \n "
-			                + "                   FROM scrddm \n "
-			                + "                  WHERE examiner = ? \n "
-			                + "                    AND rd_date = to_char(current_date,'YYYYMMDD') \n "
-			                + " );"
-					);
-			List<Object> params = new ArrayList<Object>();
-			params.add(qryUserId);
-			ResultSet rsRd = dbu.queryArray(sqlQryRd.toString(), params.toArray());
-			List<Map<String, Object>> rdList = new ArrayList<Map<String, Object>>();
-			while (rsRd.next()) {
-				Map<String, Object> rd = new HashMap<String, Object>();
-				rd.put("fRdId",   rsRd.getString("rd_id"));
-				rd.put("fRdDesc", rsRd.getString("rd_desc"));
-				rdList.add(rd);
-			}
-			rsRd.close();
-			res.put("rdList", rdList);
-			
-			res.put("success", true);
-		}
-		catch (SQLException e) {
-			res.put("status", DbUtil.exceptionTranslation(e));
-		}
-		catch (Exception e) {
-			res.put("status", ExceptionUtil.procExceptionMsg(e));
-		}
-		dbu.relDbConn();
-		
-		return res;
-	}
-	
-	@RequestMapping(value = "/ScSetScore_qryExList", method = RequestMethod.POST)
-	public @ResponseBody Map<String, Object> qryExList(@RequestParam Map<String, String> req) {
-		Map<String, Object> res = new HashMap<String, Object>();
-		res.put("status", "");
-		res.put("statusTime", new StdCalendar().toTimesString());
+            // 梯次清單
+            StringBuffer sqlQryRd = new StringBuffer(
+                              "SELECT rd_id, rd_desc, (select room_seq\n "
+                            + "                          from scrddm b\n "
+                            + "                         where a.rd_id = b.rd_id \n "
+                            + "                           and examiner = ? \n "
+                            + "                         group by room_seq) room_seq \n "
+                            + "  FROM scrdmm a \n "
+                            + " WHERE rd_id IN (SELECT rd_id \n "
+                            + "                   FROM scrddm \n "
+                            + "                  WHERE examiner = ? \n "
+                            //+ "                    AND rd_date = to_char(current_date,'YYYYMMDD') \n "
+                            + "                );"
+                    );
+            
+            StringBuffer sqlQryQs = new StringBuffer(
+                    "SELECT qs_id, (SELECT qs_name \n"
+                  + "                 FROM qsmstr \n"
+                  + "                WHERE qs_id = a.qs_id) qs_Name \n"
+                  + "  FROM SCRDRM a \n"
+                  + " WHERE rd_id = ? \n"
+                  + "   AND room_seq = ? \n"
+                  + ";"
+            );
+            
+            List<Object> params = new ArrayList<Object>();
+            params.add(qryUserId);
+            params.add(qryUserId);
+            ResultSet rsRd = dbu.queryArray(sqlQryRd.toString(), params.toArray());
+            List<Map<String, Object>> rdList = new ArrayList<Map<String, Object>>();
+            while (rsRd.next()) {
+                Map<String, Object> rd = new HashMap<String, Object>();
+                
+                String rdId = rsRd.getString("rd_id");
+                String rdDesc = rsRd.getString("rd_desc");
+                int roomSeq = rsRd.getInt("room_seq");
+                
+                rd.put("fRdId", rdId);
+                rd.put("fRdDesc", rdDesc);
+                rd.put("fRoomSeq", roomSeq);
+                
+                Map<String, Object> qs = dbu.selectMapRowList(sqlQryQs.toString(), rdId, roomSeq);
+                
+                rd.put("fQsId", qs.get("qs_id"));
+                rd.put("fQsName", qs.get("qs_name"));
+                
+                rdList.add(rd);
+            }
+            rsRd.close();
+            if (rdList.size() == 0)
+                throw new StopException("查無可評分資料");
+            res.put("rdList", rdList);
+            
+            res.put("success", true);
+        }
+        catch (StopException e) {
+            res.put("status", e.getMessage());
+        }
+        catch (SQLException e) {
+            res.put("status", DbUtil.exceptionTranslation(e));
+        }
+        catch (Exception e) {
+            res.put("status", ExceptionUtil.procExceptionMsg(e));
+        }
+        dbu.relDbConn();
+        
+        return res;
+    }
+    
+    // 查考生
+    @RequestMapping(value = "/ScSetScore_qryExList", method = RequestMethod.POST)
+    public @ResponseBody Map<String, Object> qryExList(@RequestParam Map<String, String> req) {
+        Map<String, Object> res = new HashMap<String, Object>();
+        res.put("status", "");
+        res.put("statusTime", new StdCalendar().toTimesString());
 
-		DbUtil dbu = new DbUtil();
-		try {
-			res.put("success",  false);
-			//res.put("optIdList", CodeSvc.buildSelectRankData(dbu, "TAA", false, true));
-			
-			//String  qryBProgId = req.get("bProgId");
-			String  qryRdId    = req.get("rdId");
-			//Integer qryRoomSeq = 0;
-			String  qryUserId  = req.get("userId");
-			Object  qryCon;
-			//if (qryBProgId != null) {
-			//	qryRoomSeq = Integer.parseInt(req.get("roomSeq"));
-			//}
+        DbUtil dbu = new DbUtil();
+        try {
+            res.put("success",  false);
+            String  qryRdId    = req.get("rdId");
+            String  qryUserId  = req.get("userId");
 
-			// 教案名稱
-			StringBuffer sqlQryQsName = new StringBuffer(
-					  " SELECT B.qs_name \n"
-					+ "   FROM scrdrm A, qsmstr B \n"
-				    + "  WHERE A.qs_id = B.qs_id \n"
-					+ "    AND A.rd_id = ? \n"
-				    + "    AND A.examiner = ? \n");
-			/*
-select * from scrddm where rd_id = '20180530001' and examiner='TEST2';
-select * from scrdrm where rd_id = '20180530001' and room_seq = '2';
+            StringBuffer sqlQryEx = new StringBuffer(
+                      " SELECT sect_seq, examinee, room_seq \n"
+                    + "      , (select user_name from mbdetl where user_id = a.examinee) examineeName  \n"
+                    + "      , a.score, a.result, a.opt_id, a.exam_comm, a.exam_pic \n"                              
+                    + "   FROM scrddm a \n"
+                    + "  WHERE rd_id    = ? \n "
+                    + "    AND examiner = ? \n"
+                    + "  ORDER BY sect_seq \n");
+            List<Object> params = new ArrayList<Object>();
+            params.add(qryRdId);
+            params.add(qryUserId);
+            ResultSet rsEx = dbu.queryArray(sqlQryEx.toString(), params.toArray());
+            List<Map<String, Object>> exList = new ArrayList<Map<String, Object>>();
+            while (rsEx.next()) {
+                Map<String, Object> ex = new HashMap<String, Object>();
+                ex.put("fSectSeq",  rsEx.getString("sect_seq"));
+                ex.put("fExaminee", rsEx.getString("examinee"));
+                ex.put("fExamineeName", rsEx.getString("examineeName"));
+                ex.put("fRoomSeq",  rsEx.getString("room_seq"));
+                ex.put("score",  rsEx.getString("score"));
+                ex.put("result",  rsEx.getString("result"));
+                ex.put("optId",  rsEx.getString("opt_id"));
+                ex.put("examComm",  rsEx.getString("exam_comm"));
+                ex.put("examPic",  rsEx.getString("exam_pic"));
+                exList.add(ex);
+            }
+            rsEx.close();
+            res.put("exList", exList);
+            
+            res.put("success", true);
+            res.put("status", "查詢考生完成");
+        }
+        catch (SQLException e) {
+            res.put("status", DbUtil.exceptionTranslation(e));
+        }
+        catch (Exception e) {
+            res.put("status", ExceptionUtil.procExceptionMsg(e));
+        }
+        dbu.relDbConn();
 
-select b.qs_name  from scrddm a, qsmstr b where a.qs_id = b.qs_id and rd_id = '20180530001' and examiner='TEST2';
-			// 不是評分查詢來的用考官查
-			if (qryBProgId == null) {
-				sqlQryQsName.append("    AND A.examiner = ? \n");
-				qryCon = qryUserId;
-			// 評分查詢來的用站別查
-			} else {
-				sqlQryQsName.append("    AND A.room_seq = ? \n");
-				qryCon = qryRoomSeq;
-			}
-			*/
-			//Map<String, Object> rowQs = dbu.selectMapRowList(sqlQryQsName.toString(), qryRdId, qryCon);
-			//res.put("qsName", rowQs.get("qs_name"));
-
-			// 考生清單 評分查詢來的就不查了
-			//if (qryBProgId == null) {
-				StringBuffer sqlQryEx = new StringBuffer(
-						  " SELECT sect_seq, examinee, room_seq \n"
-						+ "	  FROM scrddm \n"
-					    + "  WHERE rd_id    = ? \n "
-						+ "    AND examiner = ? \n"
-					    + "  ORDER BY sect_seq \n");
-				List<Object> params = new ArrayList<Object>();
-				params.add(qryRdId);
-				params.add(qryUserId);
-				ResultSet rsEx = dbu.queryArray(sqlQryEx.toString(), params.toArray());
-				List<Map<String, Object>> exList = new ArrayList<Map<String, Object>>();
-				while (rsEx.next()) {
-					Map<String, Object> ex = new HashMap<String, Object>();
-					ex.put("fSectSeq",  rsEx.getString("sect_seq"));
-					ex.put("fExaminee", rsEx.getString("examinee"));
-					ex.put("fRoomSeq",  rsEx.getString("room_seq"));
-					exList.add(ex);
-				}
-				rsEx.close();
-				res.put("exList", exList);
-			//}
-			
-			res.put("success", true);
-			res.put("status", "查詢考生完成");
-		}
-		catch (SQLException e) {
-			res.put("status", DbUtil.exceptionTranslation(e));
-		}
-		catch (Exception e) {
-			res.put("status", ExceptionUtil.procExceptionMsg(e));
-		}
-		dbu.relDbConn();
-
-		return res;
-	}
-	
-	// 帶出該梯次每節(學生)分數清單
-	private List<Map<String, Object>> sectList(Map<String, String> req, DbUtil dbu) throws SQLException, Exception {
-	    String  qryRdId    = req.get("rdId");
+        return res;
+    }
+    
+    // 帶出該梯次每節(學生)分數清單
+    private List<Map<String, Object>> sectList(Map<String, String> req, DbUtil dbu) throws SQLException, Exception {
+        String  qryRdId    = req.get("rdId");
         Integer qryRoomSeq = Integer.parseInt(req.get("roomSeq"));
         Integer qrySectSeq = Integer.parseInt(req.get("sectSeq"));
         //String qryQsId     = "";
@@ -351,17 +367,17 @@ select b.qs_name  from scrddm a, qsmstr b where a.qs_id = b.qs_id and rd_id = '2
         for (String itemNo : itemArray) {
             itemList.add(itemMap.get(itemNo));
         }
-	    
-	    return itemList;
-	}
-	
-	//查詢同類型的級分資料
-	@SuppressWarnings("unchecked")
+        
+        return itemList;
+    }
+    
+    //查詢同類型的級分資料
+    @SuppressWarnings("unchecked")
     private Map<String, Object> qryOpt(String optClass, DbUtil dbu) throws SQLException, Exception {
-	    Map<String, Object> opt = new HashMap<String, Object>();
-	    
-	    //String optClass = req.get("optClass").substring(0, 2);
-	    
+        Map<String, Object> opt = new HashMap<String, Object>();
+        
+        //String optClass = req.get("optClass").substring(0, 2);
+        
         StringBuffer sqlQryOpt = new StringBuffer(
                   " SELECT opt_class \"optClass\", opt_id \"optId\", opt_desc \"optDesc\", no_sel \"noSel\" \n"
                 + "   FROM scoptm \n"
@@ -380,99 +396,166 @@ select b.qs_name  from scrddm a, qsmstr b where a.qs_id = b.qs_id and rd_id = '2
                 opt.put((String) optMap.get("optClass"), a);
             }
         }
-	    
-	    return opt;
-	}
-	
-	@RequestMapping(value = "/ScSetScore_qryScore", method = RequestMethod.POST)
-	public @ResponseBody Map<String, Object> qryScore(@RequestParam Map<String, String> req) {
-		Map<String, Object> res = new HashMap<String, Object>();
-		res.put("status", "");
-		res.put("statusTime", new StdCalendar().toTimesString());
+        
+        return opt;
+    }
+    
+    @RequestMapping(value = "/ScSetScore_qryScore", method = RequestMethod.POST)
+    public @ResponseBody Map<String, Object> qryScore(@RequestParam Map<String, String> req) {
+        Map<String, Object> res = new HashMap<String, Object>();
+        res.put("status", "");
+        res.put("statusTime", new StdCalendar().toTimesString());
 
-		DbUtil dbu = new DbUtil();
-		try {
-			res.put("success",  false);
+        DbUtil dbu = new DbUtil();
+        try {
+            res.put("success",  false);
             
-			// 節次分數
-			List<Map<String, Object>> itemList = sectList(req, dbu);
-			res.put("itemList", itemList);
-			
-			// 考試結果清單
-			res.put("resList", CodeSvc.buildSelectDataByKind(dbu, "SCRESU", false)); 
-			// 整體
-	        /*
-			
-	        StringBuffer sqlQryTot = new StringBuffer(
-	                  " SELECT opt_id, score, result \n"
-	                + "   FROM scrddm \n"
-	                + "  WHERE rd_id    = ? \n"
-	                + "    AND room_seq = ? \n"
-	                + "    AND sect_seq = ? \n");
+            // 節次分數
+            List<Map<String, Object>> itemList = sectList(req, dbu);
+            res.put("itemList", itemList);
+            
+            String  qryRdId    = req.get("rdId");
+            Integer qryRoomSeq = Integer.parseInt(req.get("roomSeq"));
+            Integer qrySectSeq = Integer.parseInt(req.get("sectSeq"));
+            
+            // 整體
+            StringBuffer sqlQryTot = new StringBuffer(
+                      " SELECT opt_id, score, result \n"
+                    + "   FROM scrddm \n"
+                    + "  WHERE rd_id    = ? \n"
+                    + "    AND room_seq = ? \n"
+                    + "    AND sect_seq = ? \n");
 
-	        Map<String, Object> rowTot = dbu.selectMapRowList(sqlQryTot.toString(), qryRdId, qryRoomSeq, qrySectSeq);
-	        res.put("optId",  rowTot.get("opt_id"));
-	        res.put("score",  rowTot.get("score"));
-	        res.put("result", rowTot.get("result"));*/
-	        
-	        // 把同類型的級分資料轉給畫面
-			String optClass = (String) itemList.get(0).get("optClass");
-	        Map<String, Object> opt = qryOpt(optClass.substring(0, 2), dbu);
-	        res.put("opt", opt);
+            Map<String, Object> rowTot = dbu.selectMapRowList(sqlQryTot.toString(), qryRdId, qryRoomSeq, qrySectSeq);
+            res.put("optId",  rowTot.get("opt_id"));
+            res.put("score",  rowTot.get("score"));
+            res.put("result", rowTot.get("result"));
+            
+            // 把同類型的級分資料轉給畫面
+            String optClass = (String) itemList.get(0).get("optClass");
+            Map<String, Object> opt = qryOpt(optClass.substring(0, 2), dbu);
+            res.put("opt", opt);
 
-			res.put("success", true);
-			res.put("status", "查詢評分表完成");
-		}
-		catch (SQLException e) {
-			res.put("status", DbUtil.exceptionTranslation(e));
-		}
-		catch (Exception e) {
-			res.put("status", ExceptionUtil.procExceptionMsg(e));
-		}
-		dbu.relDbConn();
-		
-		return res;
-	}
-	
-	/**
-	 * 儲存評分
-	 * @param req
-	 * @return
-	 */
-	@RequestMapping(value = "/ScSetScore_scoreEditDone", method = RequestMethod.POST)
-	public @ResponseBody Map<String, Object> addItem(@RequestParam Map<String, String> req) {
-		Map<String, Object> res = new HashMap<String, Object>();
-		res.put("status", "");
-		res.put("statusTime", new StdCalendar().toTimesString());
+            res.put("success", true);
+            res.put("status", "查詢評分表完成");
+        }
+        catch (StopException e) {
+            res.put("status", e.getMessage());
+        }
+        catch (SQLException e) {
+            res.put("status", DbUtil.exceptionTranslation(e));
+        }
+        catch (Exception e) {
+            res.put("status", ExceptionUtil.procExceptionMsg(e));
+        }
+        dbu.relDbConn();
+        
+        return res;
+    }
+    
+    /**
+     * 儲存評分
+     * @param req
+     * @return
+     */
+    @RequestMapping(value = "/ScSetScore_scoreEditDone", method = RequestMethod.POST)
+    public @ResponseBody Map<String, Object> addItem(@RequestParam Map<String, String> req) {
+        Map<String, Object> res = new HashMap<String, Object>();
+        res.put("status", "");
+        res.put("statusTime", new StdCalendar().toTimesString());
 
-		DbUtil dbu = new DbUtil();
-		try {
+        DbUtil dbu = new DbUtil();
+        try {
             res.put("success", false);
             
-            String rdId    = req.get("rdId");
-			String roomSeq = req.get("roomSeq");
-			String sectSeq = req.get("sectSeq");
-			String optId   = req.get("optId");
-			Integer score = 0;
-			String result = "";
-			
-			// 執行
- 			String sqlInsQsmstr =
- 				  " UPDATE scrddm SET \n"
- 				+ "      , score    = ? \n"
- 				+ "      , result   = ? \n"
- 				+ "      , opt_id   = ? \n"
- 				+ "  WHERE rd_id    = ? \n"
- 				+ "    AND room_seq = ? \n"
- 				+ "    AND sect_seq = ? \n";
- 			dbu.executeList(sqlInsQsmstr, score, result, optId, rdId, roomSeq, sectSeq);
- 			dbu.doCommit();
-		}
-		catch (Exception e) {
-			res.put("status", ExceptionUtil.procExceptionMsg(e));
-		}
-		dbu.relDbConn();
-		
-		return res;
-	}
+            String rdId = req.get("rdId");
+            String qsId = req.get("qsId");
+            int sectSeq = (req.get("sectSeq") != null) ? Integer.parseInt(req.get("sectSeq")) : 0;
+            int roomSeq = (req.get("roomSeq") != null) ? Integer.parseInt(req.get("roomSeq")) : 0;
+            String itemList = (req.get("itemList") != null) ? req.get("itemList") : "";
+            int score = 0;
+            String result = "FAI";
+            JSONArray scoJsonArr;
+            if (itemList.equals(""))
+                throw new StopException("無評分資料");
+            else
+                scoJsonArr = new JSONArray(itemList);
+                        
+            // 執行
+            String sqlDelSco =
+                    "DELETE \n"
+                  + "  FROM scscom \n"
+                  + " WHERE rd_id = ? \n"
+                  + "   AND sect_seq = ? \n"
+                  + "   AND room_seq = ? \n";
+            String sqlInsSco = 
+                    "INSERT INTO scscom "
+                  + "(rd_id, room_seq, sect_seq, item_no, opt_class, opt_id, exam_comm, exam_pic) "
+                  + "VALUES "
+                  + "(?, ?, ?, ?, ?, ?, ?, ?);";
+            
+            String sqlQryOpt = 
+                    "SELECT score \n"
+                  + "  FROM scoptm \n"
+                  + " WHERE opt_class = ? \n"
+                  + "   AND opt_id = ? \n";
+            
+            String sqlQryQst = 
+                    "SELECT total_score \"totalScore\", pass_score \"passScore\", borderline "
+                  + "  FROM scqstm "
+                  + " WHERE qs_id = ?";
+            
+            String sqlUpQsmstr =
+                    " UPDATE scrddm  \n"
+                  + "    SET score    = ? \n"
+                  + "      , result   = ? \n"
+                  //+ "      , opt_id   = ? \n" 不知要這欄位做什
+                  + "  WHERE rd_id    = ? \n"
+                  + "    AND room_seq = ? \n"
+                  + "    AND sect_seq = ? \n";
+            
+            Map<String, Object> qst = dbu.selectMapRowList(sqlQryQst, qsId);
+            int totalScore = (Integer) qst.get("totalScore");
+            int passScore = (Integer) qst.get("passScore");
+            int borderline = (Integer) qst.get("borderline");
+
+            dbu.executeList(sqlDelSco, rdId, sectSeq, roomSeq);
+            for (int i = 0; i < scoJsonArr.length(); i++) {
+                JSONObject sco = scoJsonArr.getJSONObject(i);
+                int itemNo  = Integer.parseInt(sco.getString("itemNo")+"");
+                String optClass = sco.getString("optClass");
+                String optId = sco.getString("optId");
+                
+                score += dbu.selectIntList(sqlQryOpt, optClass, optId);
+                
+                String examComm = sco.getString("examComm");
+                String examPic = sco.getString("examPic");
+                dbu.executeList(sqlInsSco, rdId, roomSeq, sectSeq, itemNo, optClass, optId, examComm, examPic);
+            }
+            if (score <= totalScore && score >= passScore)
+                result = "PAS";
+            else if (score <= passScore && score >= borderline)
+                result = "BOR";
+            else if (score < borderline)
+                result = "FAI";
+            dbu.executeList(sqlUpQsmstr, score, result, rdId, roomSeq, sectSeq);
+            dbu.doCommit();
+            
+            res.put("score",  score);
+            res.put("result", result);
+            res.put("success", true);
+        }
+        catch (StopException e) {
+            res.put("status", e.getMessage());
+        }        
+        catch (SQLException e) {
+            res.put("status", DbUtil.exceptionTranslation(e));
+        }
+        catch (Exception e) {
+            res.put("status", ExceptionUtil.procExceptionMsg(e));
+        }
+        dbu.relDbConn();
+        
+        return res;
+    }
 }

@@ -51,15 +51,17 @@ $(function(){
         idField:'fRdId',
         textField:'fRdDesc',
         mode: 'remote',
-        
+        url: 'ScSetScore_qryRdList',
+        type: 'POST',
         queryParams: {'userId': parent.$("#userId").val()},
         loader: function(param,success,error){
             
-            if ($("#rdId").textbox('getText') != null && $("#rdId").textbox('getText') != "" 
+            if ($("#rdId").textbox('getValue') != null && $("#rdId").textbox('getValue') != "" 
              && $("#rdDesc").val() != null && $("#rdDesc").val() != "") {
                 var res = [{'fRdId':$("#rdId").textbox('getText'), 'fRdDesc':$("#rdDesc").val()}];
                 success(res);
                 $("#rdId").textbox('readonly', true);
+                $("#examineeText").textbox('readonly', true);
             }
             else {
                 var opts = $(this).datagrid('options');
@@ -74,51 +76,109 @@ $(function(){
 	                        success(res.rdList);
 	                        var fRdId = res.rdList[0]['fRdId'];
 	                    	$("#rdId").combogrid('setValue',fRdId);
-	                    	
-	                    	$("#examineeText").combogrid('reload', {'rdId':fRdId});
+	                    	$("#qsName").textbox('setValue',res.rdList[0]['fQsName']);
+	                    	$("#qsId").val(res.rdList[0]['fQsId']);
+	                    	$("#roomSeq").val(res.rdList[0]['fRoomSeq']);
+	                    	var exam = {'rdId':fRdId, 'userId': parent.$("#userId").val()};
+	                    	$("#examineeText").combogrid('grid').datagrid('reload', exam);
 	                    }
-	                    else
-	                        return false;
-	                    $("#examiner").val('');
+	                    else {
+	                    	$("#rdId").combogrid('setValue','');
+                            $("#qsName").textbox('setValue','');
+                            $("#qsId").val('');
+                            $("#roomSeq").val('');
+                            $("#examineeText").combogrid('setValue','');
+	                    }
 	                }
 	            });
             }
         },
+        onSelect: function(idx) {
+        	var rec = $("#rdId").combogrid('grid').datagrid('getRows')[idx];
+            $("#roomSeq").val(rec.fRoomSeq);
+            var rs = $("#roomSeq").val();
+            $("#qsId").val(rec.fQsId);
+            var exam = {'rdId':rec.fRdId, 'userId': parent.$("#userId").val()};
+            $("#examineeText").combogrid('grid').datagrid('reload', exam);
+        },
         columns:[[
             {field:'fRdId',   title:'梯次', width: 100},
             {field:'fRdDesc', title:'梯次說明', width: 200},
+            {field:'fQsId', hidden: true},
+            {field:'fQsName', hidden: true},
+            {field:'fRoomSeq', hidden: true}
         ]]
     });
-    
-    $("")
-    
+
     $("#examineeText").combogrid({
         panelWidth:241,
         editable:false,
         idField:'fExaminee',
-        textField:'fExaminee',
+        textField:'fExamineeName',
+        valueField:'fExaminee',
+        mode: 'remote',
         onClickRow: qryItemList,
         url: 'ScSetScore_qryExList',
         type: 'POST',
+        queryParams: {'rdId':$("#rdId").textbox('getValue'), 'userId': parent.$("#userId").val()},
         loader: function(param,success,error){
-            $.ajax({});
+        	if ($("#rdId").textbox('getValue') != null && $("#rdId").textbox('getValue') != "" 
+        		&& $("#qsName").val() != null && $("#qsName").val() != ""
+        	    && $("#examinee").val() != null && $("#examinee").val() != "") {
+        		qryItemList();
+        	}
+        	else {
+	        	var opts = $(this).datagrid('options');
+	            if (!opts.url || !param.rdId) return false;
+	            $.ajax({
+	            	url: opts.url,
+	                type: opts.type,
+	                data: param,
+	                dataType: 'json',
+	                success: function(res) {
+	                    if (res.success) {
+	                        success(res.exList);
+	                        var fRdId = res.exList[0]['fExaminee'];
+	                        $("#examineeText").combogrid('setValue',fRdId);
+	                        $("#sectSeq").val(res.exList[0]['fSectSeq']);
+	                        
+	                        $("#optId").textbox('setText',res.exList[0]['optId']);
+	                        $("#score").textbox('setText',res.exList[0]['score']);
+	                        $("#result").textbox('setText',res.exList[0]['result']);
+	                        qryItemList();
+	                    }
+	                }
+	            });
+        	}
+        },
+        onSelect: function(idx) {
+        	$("#sectSeq").val($("#examineeText").combogrid('grid').datagrid('getRows')[idx].fSectSeq);
         },
         columns:[[
             {field:'fSectSeq',  title:'節次', width:  40},
-            {field:'fExaminee', title:'考生', width: 100},
+            {field:'fExaminee', hidden:true},
+            {field:'fExamineeName', title:'考生', width: 100},
             {field:'fRoomSeq',  title:'站別', width:  40},
             {field:'fTime',     title:'時間', width:  60},
+            {field:'score', hidden:true},
+            {field:'result', hidden:true},
+            {field:'optId', hidden:true},
+            {field:'examComm', hidden:true},
+            {field:'examPic', hidden:true},
         ]]
     });
+
     
-    qryItemList();
 });
 
 /*
  * 查詢項次。
  */
 function qryItemList(index,row) {
-    var req = {};
+    var req = {'rdId': $("#rdId").textbox('getValue')
+    		 , 'roomSeq': $("#roomSeq").val() 
+    		 , 'sectSeq': $("#sectSeq").val()
+    };
     // 評分查詢 -> 梯次表 -> 評分表
     /*
     if ( $("#bProgId").val().length != 0 ) {
@@ -134,13 +194,16 @@ function qryItemList(index,row) {
     $.ajax({
         type: 'POST',
         url: 'ScSetScore_qryScore',
-        data: {'rdId': $("#rdId").val(), 'roomSeq': $("#roomSeq").val() ,'sectSeq': $("#sectSeq").val()},
+        data: req,
         dataType: 'json',
         success: function(res){
             parent.showStatus(res);
             if (res.success) {
                 var optClassKey = Object.keys(res.opt)[0];
                 opt = res.opt;
+                $("#optId").textbox("setText", res.optId);
+                $("#score").textbox("setText", res.score);
+                $("#result").textbox("setText", res.result);
                 var cols = [];
                 var idx  = 0;
                 cols[idx] = {field: 'itemNo',   title: '編號',     width:  80}; idx++;
@@ -153,9 +216,9 @@ function qryItemList(index,row) {
                 cols[idx] = {field: 'optClass', hidden: true}; idx++;
                 for (var i=0; i < res.opt[optClassKey].length ; i++) {
                     for (var j=0; j<res.itemList.length; j++) {
-                        res.itemList[j]['optClass' + res.opt[optClassKey][i].optId] = i;
+                        res.itemList[j]['optIdRadio' + res.opt[optClassKey][i].optId] = i;
                     }
-                    cols[i+idx] = {field: 'optClass' + res.opt[optClassKey][i].optId, title: res.opt[optClassKey][i].optDesc, width:  65,
+                    cols[i+idx] = {field: 'optIdRadio' + res.opt[optClassKey][i].optId, title: res.opt[optClassKey][i].optDesc, width:  65,
                             formatter:function(value, row, index){
                                 var r = '';
                                 if (!opt[row.optClass][value].noSel) {
@@ -192,7 +255,6 @@ function qryItemList(index,row) {
         }
      
     });
-    
 }
 
 function editComm() {
@@ -211,25 +273,30 @@ function clickTip(src) {
 
 function scoreEditDone() {
     var req = {};
-    // 評分查詢 -> 梯次表 -> 評分表
-    if ( $("#bProgId").val().length != 0 ) {
-        req.rdId    = $("#bRdId").val();
-        req.roomSeq = $("#bRoomSeq").val();
-        req.sectSeq = $("#bSectSeq").val();
-    } else {
-        req.rdId    = $('#rdId').combogrid('getValue');
-        req.roomSeq = row.fRoomSeq;
-        req.sectSeq = row.fSectSeq;
+    req.rdId = $('#rdId').combogrid('getValue');
+    req.sectSeq = $('#sectSeq').val();
+    req.roomSeq = $('#roomSeq').val();
+    req.qsId = $("#qsId").val();
+    
+    var rows = $('#itemList').datagrid('getRows');
+    var itemList = [{}];
+    for (var i=0; i<rows.length; i++) {
+    	var item = {};
+    	item.itemNo = rows[i].itemNo;
+    	item.optClass = rows[i].optClass;
+    	item.optId = $('input[name=optIdRadio'+i+']:checked').val();
+    	item.examComm = "";
+    	item.examPic = "";
+    	itemList[i] = item;
     }
     
-    //註記
-    //考官塗鴉
-    req.optId = $('#optId').combogrid('getValue');
-    //項目
-    
+    req.itemList = JSON.stringify(itemList);
     $.post("ScSetScore_scoreEditDone", req, function (res) {
         parent.showStatus(res);
         if (res.success) {
+        	$("#optId").textbox("setText", res.optId);
+            $("#score").textbox("setText", res.score);
+            $("#result").textbox("setText", res.result);
         }
     }, "json");
 }
@@ -287,16 +354,16 @@ function backProgId(bProgId) {
                 </td>
                 <!-- <td style="width: 300px;"></td> -->
                 <td style="width: 140px; text-align: right;">
-                    整體級數：
-                    <input id="optId" type='text' class="easyui-combobox" style="width: 50px;" data-options="editable: false, panelHeight: 'auto'"/>
+整體級數：
+                    <input id="optId" class="easyui-textbox" style="width: 50px;" value="${optId}"/>
                 </td>
                 <td style="width: 110px; text-align: right;">
-                    得分：
-                    <input id="score" type='text' class="easyui-textbox" style="width: 50px;" data-options="readonly: true"/>
+得分：
+                    <input id="score" type='text' class="easyui-textbox" style="width: 50px;" data-options="readonly: true" value="${score}"/>
                 </td>
                 <td style="width: 170px; text-align: right;">
                     考試結果：
-                    <input id="result" type='text' class="easyui-combobox" style="width: 80px;" data-options="readonly: true"/>
+                    <input id="result" type='text' class="easyui-textbox" style="width: 80px;" data-options="readonly: true" value="${result}"/>
                 </td>
                 <td style="width: 100px; text-align: right;">
                     <button id="editModBut" type="button" style="width: 80px;" onclick="scoreEditDone();">儲存評分</button>
