@@ -110,7 +110,9 @@ function addQs() {
 		if (res.success) {
 			$("#qsEdit"           ).dialog("open");
 			$("#qsEditMode"       ).val("A");
-			$("#qsEdit .modPane"  ).css("visibility",    "hidden");
+			//$("#qsEdit .modPane"  ).css("visibility",    "hidden");
+			$("#pCopyModelL").hide();
+			$("#pCopyModel").hide();
 			$("#editQsId"         ).textbox("setValue",  "");
 			$("#editQsName"       ).textbox("setValue",  "");
 			$("#editTotalOptClass").combobox("loadData", res.totalOptClassList);
@@ -165,7 +167,9 @@ function copQs(src) {
 			jrow.addClass("select");
 			$("#qsEdit"           ).dialog("open");
 			$("#qsEditMode"       ).val("A");
-			$("#qsEdit .modPane"  ).css("visibility",    "visible");
+			//$("#qsEdit .modPane"  ).css("visibility",    "visible");
+			$("pCopyModelL").show();			
+			$("pCopyModel").show();
 			$("#editQsIdOrg"      ).textbox("setValue",  req.qsId);
 			$("#editQsId"         ).textbox("setValue",  "");
 			$("#editQsName"       ).textbox("setValue",  "");
@@ -625,10 +629,12 @@ function clearAll() {
 	<input id="qsEditMode" type="hidden" />
 	<div style="float: left; margin: 10px 0 0 10px;">
 		<table>
-			<tr class="modPane">
-				<td>原教案代碼</td>
+			<tr>
+				<td><label id="pCopyModelL">原教案代碼</label></td>
 				<td>
-					<input id="editQsIdOrg"       class="easyui-textbox" style="width: 250px;" data-options="readonly: true" />
+				    <div id="pCopyModel">
+					<input id="editQsIdOrg" class="easyui-textbox" style="width: 250px;" data-options="readonly: true" />
+					</div>
 				</td>
 			</tr>
 			<tr>
@@ -637,10 +643,10 @@ function clearAll() {
 					<input id="editQsId"          class="easyui-textbox" style="width: 250px;" />
 				</td>
 			</tr>
-			<tr class="modPane">
+			<tr>
 				<td>教案名稱</td>
 				<td>
-					<input id="editQsName"        class="easyui-textbox" style="width: 250px;" data-options="readonly: true" />
+					<input id="editQsName"        class="easyui-textbox" style="width: 250px;"/>
 				</td>
 			</tr>
 			<tr>
@@ -670,11 +676,7 @@ function clearAll() {
 			<tr>
 				<td>項目評分級別</td>
 				<td>
-					<select id="editFract"         class="easyui-combobox" style="width: 250px;" data-options="editable: false, panelHeight: 'auto'">
-						<option value="2">2</option>
-						<option value="3">3</option>
-						<option value="5">5</option>
-					</select>
+					<input id="editFract" class="easyui-combobox" style="width: 250px;"/>
 				</td>
 			</tr>
 			<tr>
