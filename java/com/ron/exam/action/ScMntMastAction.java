@@ -98,28 +98,31 @@ public class ScMntMastAction {
 	    String sqlQryOptClass = 
 	            "SELECT opt_class \"optClass\", opt_id \"optId\", opt_desc \"optDesc\" \n"
 	          + "  FROM scoptm \n";
-	    if (optType.equals("T")) {
-	        sqlQryOptClass +=
-	            " WHERE opt_id = '-' \n"
-	          + "   AND opt_class Like ? || '%' \n";
-	    }
-	    else if (optType.length() == 3)
-	    {
-	        sqlQryOptClass +=
-	            " WHERE opt_id != '-' \n"
-	          + "   AND opt_class = ? \n";
-	    }
-	    else if (optType.equals("M")) {
-	        sqlQryOptClass =
-	            "SELECT fract \"optClass\" \n"
-	          + "  FROM scoptm \n"
-	          + " WHERE opt_id = '-' "
-	          + "   AND opt_class Like ? || '%' "
-	          + " GROUP BY fract";
-	    }
+    	if (optType.equals("T")) {
+    	    sqlQryOptClass +=
+    	        " WHERE opt_id = '-' \n"
+    	      + "   AND opt_class Like ? || '%' \n";
+    	}
+    	else if (optType.length() == 3)
+    	{
+    	    sqlQryOptClass +=
+    	        " WHERE opt_id != '-' \n"
+    	      + "   AND opt_class = ? \n";
+    	}
 	    List<Map<String, Object>> optClassList = dbu.selectMapAllList(sqlQryOptClass, optType);
 	    return optClassList;
 	}
+	
+	private List<Map<String, Object>> qryOptClassList(int optType, DbUtil dbu) throws SQLException, Exception{
+        String sqlQryOptClass = 
+                "SELECT opt_class \"optClass\", opt_id \"optId\", opt_desc \"optDesc\" \n"
+              + "  FROM scoptm \n"
+              + " WHERE opt_id = '-' \n"
+              + "   AND fract = ? \n"
+              + "   AND opt_type = 'ITE'";
+        List<Map<String, Object>> optClassList = dbu.selectMapAllList(sqlQryOptClass, optType);
+        return optClassList;
+    }
 	
 	private List<Map<String, Object>> qryQsList(Map<String, String> req, DbUtil dbu) throws SQLException, Exception{
 	    
@@ -142,18 +145,19 @@ public class ScMntMastAction {
 	    
 	    // 查詢條件
         StringBuffer sqlQryQs = new StringBuffer(
-              " SELECT A.qs_id, B.qs_name, A.total_opt_class, A.total_score, A.pass_score, A.borderline, A.fract, \n"
+              " SELECT B.qs_id, B.qs_name, A.total_opt_class, A.total_score, A.pass_score, A.borderline, A.fract, \n"
             + "        ( SELECT COUNT(*) FROM scqstd WHERE qs_id = A.qs_id) crStd \n");
         //StringBuffer sqlCntQs = new StringBuffer(" SELECT COUNT(*)");
         StringBuffer sqlCond = new StringBuffer(
-              "   FROM scqstm A, qsmstr B \n"
-            + "  WHERE A.qs_id = B.qs_id \n");
+              "   FROM qsmstr B left join scqstm A \n"
+            + "     ON A.qs_id = B.qs_id \n"
+            + "  WHERE 1=1 \n");
         List<Object> params = new ArrayList<Object>();
         
         // 教案代碼
         String qryQsId = (req.get("qsId") != null)? req.get("qsId") : "";
         if (!qryQsId.isEmpty()) {
-            sqlCond.append(" AND A.qs_id LIKE '%' || ? || '%'\n");
+            sqlCond.append(" AND B.qs_id LIKE '%' || ? || '%'\n");
             params.add(qryQsId);
         }
         
@@ -256,13 +260,13 @@ public class ScMntMastAction {
         List<Map<String, Object>> qsList = new ArrayList<Map<String, Object>>();
         while (rsQs.next()) {
             Map<String, Object> qs = new HashMap<String, Object>();
-            qs.put("qsId",          rsQs.getString("qs_id"));
-            qs.put("qsName",        rsQs.getString("qs_name"));
-            qs.put("totalOptClass",    rsQs.getString("total_opt_class"));
-            qs.put("totalScore",    rsQs.getString("total_score"));
-            qs.put("passScore",     rsQs.getString("pass_score"));
-            qs.put("borderline",    rsQs.getString("borderline"));
-            qs.put("fract",         rsQs.getString("fract"));
+            qs.put("qsId",          (rsQs.getString("qs_id")!=null)?rsQs.getString("qs_id"):"");
+            qs.put("qsName",        (rsQs.getString("qs_name")!=null)?rsQs.getString("qs_name"):"");
+            qs.put("totalOptClass", (rsQs.getString("total_opt_class")!=null)?rsQs.getString("total_opt_class"):"");
+            qs.put("totalScore",    (rsQs.getString("total_score")!=null)?rsQs.getString("total_score"):"");
+            qs.put("passScore",     (rsQs.getString("pass_score")!=null)?rsQs.getString("pass_score"):"");
+            qs.put("borderline",    (rsQs.getString("borderline")!=null)?rsQs.getString("borderline"):"");
+            qs.put("fract",         (rsQs.getString("fract")!=null)?rsQs.getString("fract"):"");
             qs.put("crStd",         Integer.parseInt(rsQs.getString("crStd")) > 0 ? "Y" :"N");
             qsList.add(qs);
         }
@@ -287,7 +291,7 @@ public class ScMntMastAction {
 			res.put("success",  false);
 			
 			res.put("totalOptClassList", qryOptClassList("T", dbu));
-            res.put("fractList", qryOptClassList("M", dbu));
+            res.put("fractList", CodeSvc.buildSelectDataByKind(dbu, CodeSvc.c_kindScFractType, true));
 			
 			List<Map<String, Object>> qsList = qryQsList(req,dbu);
 			res.put("qsList", qsList);
@@ -458,6 +462,66 @@ public class ScMntMastAction {
 	 * @return
 	 */
 	@RequestMapping(value = "/ScMntMast_modQs", method = RequestMethod.POST)
+    public @ResponseBody Map<String, Object> modQs(@RequestParam Map<String, String> req) {
+        Map<String, Object> res = new HashMap<String, Object>();
+        res.put("status", "");
+        res.put("statusTime", new StdCalendar().toTimesString());
+
+        DbUtil dbu = new DbUtil();
+        try {
+            res.put("success", false);
+            
+            // 基本檢查
+            UserData ud = UserData.getUserData();
+            if (!ProgData.c_privBaseMaintain.equals(ud.getPrivBase(c_progId)))
+                throw new StopException("您無權限執行此動作");
+            
+            String qsId = req.get("qsId");
+            if ("".equals(qsId))
+                throw new StopException("教案代碼不可以為空白");
+            
+            String totalOptClass = req.get("totalOptClass");
+            if (totalOptClass.isEmpty())
+                throw new StopException("整體評分分級不可以為空白");
+            if (req.get("totalScore").length() == 0)
+                throw new StopException("滿分分數不可以為空白");
+            Integer totalScore = Integer.parseInt(req.get("totalScore"));
+            if (req.get("passScore").length() == 0)
+                throw new StopException("通過分數不可以為空白");
+            Integer passScore = Integer.parseInt(req.get("passScore"));
+            if (req.get("borderline").length() == 0)
+                throw new StopException("邊界分數不可以為空白");
+            Integer borderline = Integer.parseInt(req.get("borderline"));
+            if (req.get("fract").length() == 0)
+                throw new StopException("項次評分級別不可以為空白");
+            Integer fract = Integer.parseInt(req.get("fract"));
+            
+            
+            String sqlDelQsmstr =
+                    "DELETE FROM scqstm WHERE qs_id = ?";
+            dbu.executeList(sqlDelQsmstr, qsId);
+            
+            String sqlInsQsmstr =
+                    " INSERT INTO scqstm(qs_id, total_opt_class, total_score, pass_score, borderline, fract) \n"
+                  + " VALUES(?, ?, ?, ?, ?, ?)\n";
+            dbu.executeList(sqlInsQsmstr, qsId, totalOptClass, totalScore, passScore, borderline, fract);
+            dbu.doCommit();
+              
+            res.put("success", true);
+            res.put("status", "教案資料編輯完成");
+        }
+        catch (StopException e) {
+            res.put("status", e.getMessage());
+        }
+        catch (Exception e) {
+            res.put("status", ExceptionUtil.procExceptionMsg(e));
+        }
+        dbu.relDbConn();
+        
+        return res;
+    }
+	/*
+	@RequestMapping(value = "/ScMntMast_modQs", method = RequestMethod.POST)
 	public @ResponseBody Map<String, Object> modQs(@RequestParam Map<String, String> req) {
 		Map<String, Object> res = new HashMap<String, Object>();
 		res.put("status", "");
@@ -552,6 +616,7 @@ public class ScMntMastAction {
 		
 		return res;
 	}
+	*/
 
 	/**
 	 * 查詢項目內容
@@ -568,7 +633,8 @@ public class ScMntMastAction {
 		try {
 			res.put("success", false);
 			//res.put("optClassList", CodeSvc.buildSelectRankData(dbu, "M" + req.get("fract"), true, true));
-
+			res.put("optClassList", qryOptClassList(Integer.parseInt(req.get("fract")), dbu));
+			
 			String qsId = req.get("qsId");
 			if (qsId != null) {
 				StringBuffer sqlQryItem = new StringBuffer (
