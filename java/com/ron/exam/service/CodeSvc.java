@@ -82,29 +82,4 @@ public class CodeSvc {
 		return dbu.selectIntList(sqlCntCode, codeKind, codeCode) > 0;
 	}
 	
-	public static List<Map<String, Object>> buildSelectRankData(DbUtil dbu, String paramClass, boolean title, boolean blank) throws SQLException {
-		StringBuffer sqlQryParam = new StringBuffer(
-			  " SELECT opt_class \"value\", opt_desc \"text\" \n"
-			+ "   FROM scoptm \n"
-			+ "  WHERE opt_class LIKE ? || '%' \n");
-		if (title)
-			sqlQryParam.append("    AND show_order = 0 \n");
-		else
-			sqlQryParam.append("    AND show_order <> 0 \n");
-		List<Map<String, Object>> all = new ArrayList<Map<String, Object>>();
-		if (blank) {
-			Map<String, Object> empty = new HashMap<String, Object>();
-			empty.put("value", "");
-			empty.put("text", "");
-			all.add(empty);
-		}
-		all.addAll(dbu.selectMapAllList(sqlQryParam.toString(), paramClass));
-		return all;
-	}
-	
-	public static Map<String, String> buildStringRankMap(DbUtil dbu, String paramClass) throws SQLException {
-		String sqlQryParam = " SELECT opt_class, opt_desc FROM scoptm WHERE opt_class LIKE ? || '%'";
-		return dbu.selectKeyStringList(sqlQryParam, "opt_class", "opt_desc", paramClass);
-	}
-	
 }

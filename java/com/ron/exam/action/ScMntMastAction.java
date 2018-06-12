@@ -93,14 +93,191 @@ public class ScMntMastAction {
 		}
 		return "ScMntMast";
 	}
+	
+	private List<Map<String, Object>> qryOptClassList(String optType, DbUtil dbu) throws SQLException, Exception{
+	    String sqlQryOptClass = 
+	            "SELECT opt_class \"optClass\", opt_id \"optId\", opt_desc \"optDesc\" \n"
+	          + "  FROM scoptm \n";
+	    if (optType.equals("T")) {
+	        sqlQryOptClass +=
+	            " WHERE opt_id = '-' \n"
+	          + "   AND opt_class Like ? || '%' \n";
+	    }
+	    else if (optType.length() == 3)
+	    {
+	        sqlQryOptClass +=
+	            " WHERE opt_id != '-' \n"
+	          + "   AND opt_class = ? \n";
+	    }
+	    else if (optType.equals("M")) {
+	        sqlQryOptClass =
+	            "SELECT fract \"optClass\" \n"
+	          + "  FROM scoptm \n"
+	          + " WHERE opt_id = '-' "
+	          + "   AND opt_class Like ? || '%' "
+	          + " GROUP BY fract";
+	    }
+	    List<Map<String, Object>> optClassList = dbu.selectMapAllList(sqlQryOptClass, optType);
+	    return optClassList;
+	}
+	
+	private List<Map<String, Object>> qryQsList(Map<String, String> req, DbUtil dbu) throws SQLException, Exception{
+	    
+	    int pageRow = Integer.MAX_VALUE;
+        int pageAt  = 0;
+        try {
+            pageRow = Integer.parseInt(req.get("pageRow"));
+            if (pageRow <= 0)
+                pageRow = Integer.MAX_VALUE;
+        }
+        catch (Exception e) {
+        }
+        try {
+            pageAt = Integer.parseInt(req.get("pageAt")) - 1;
+            if (pageAt < 0)
+                pageAt = 0;
+        }
+        catch (Exception e) {
+        }
+	    
+	    // 查詢條件
+        StringBuffer sqlQryQs = new StringBuffer(
+              " SELECT A.qs_id, B.qs_name, A.total_opt_class, A.total_score, A.pass_score, A.borderline, A.fract, \n"
+            + "        ( SELECT COUNT(*) FROM scqstd WHERE qs_id = A.qs_id) crStd \n");
+        //StringBuffer sqlCntQs = new StringBuffer(" SELECT COUNT(*)");
+        StringBuffer sqlCond = new StringBuffer(
+              "   FROM scqstm A, qsmstr B \n"
+            + "  WHERE A.qs_id = B.qs_id \n");
+        List<Object> params = new ArrayList<Object>();
+        
+        // 教案代碼
+        String qryQsId = (req.get("qsId") != null)? req.get("qsId") : "";
+        if (!qryQsId.isEmpty()) {
+            sqlCond.append(" AND A.qs_id LIKE '%' || ? || '%'\n");
+            params.add(qryQsId);
+        }
+        
+        // 教案名稱
+        String qryQsName = (req.get("qsName") != null)? req.get("qsName") : "";
+        if (!qryQsName.isEmpty()) {
+            sqlCond.append(" AND B.qs_name LIKE '%' || ? || '%'\n");
+            params.add(qryQsName);
+        }
+                    
+        // 科別
+        String qryDepart = (req.get("departId")!=null)? req.get("departId") : "";
+        if (!qryDepart.isEmpty()) {
+            sqlCond.append(" AND B.depart_id = ?\n");
+            params.add(qryDepart);
+        }
+        
+        // 對象
+        String qryTargetId = (req.get("targetId")!=null)? req.get("targetId") : "";
+        if (!qryTargetId.isEmpty()) {
+            sqlCond.append(" AND B.target_id = ?\n");
+            params.add(qryTargetId);
+        }
+        
+        // 測驗類別
+        List<String> qryQsClassList = new ArrayList<String>();
+        for (int i = 0; ; i++) {
+            String key = "qryQsClass[" + i + "]";
+            if (!req.containsKey(key))
+                break;
+            qryQsClassList.add(req.get(key));
+        }
+        if (qryQsClassList.size() > 0) {
+            sqlCond.append(" AND EXISTS(SELECT class_id FROM qsclss C WHERE a.qs_id = C.qs_id AND C.class_type = 'C' AND class_id IN ");
+            DbUtil.buildInSqlParam(sqlCond, params, qryQsClassList);
+            sqlCond.append(")\n");
+        }
+        
+        // 核心能力
+        List<String> qryAbilityList = new ArrayList<String>();
+        for (int i = 0; ; i++) {
+            String key = "qryQsAbility[" + i + "]";
+            if (!req.containsKey(key))
+                break;
+            qryAbilityList.add(req.get(key));
+        }
+        if (qryAbilityList.size() > 0) {
+            sqlCond.append(" AND EXISTS(SELECT class_id FROM qsclss C WHERE a.qs_id = C.qs_id AND C.class_type = 'A' AND class_id IN ");
+            DbUtil.buildInSqlParam(sqlCond, params, qryAbilityList);
+            sqlCond.append(")\n");
+        }
+
+        //sqlCntQs.append(sqlCond);
+        //res.put("total", dbu.selectIntArray(sqlCntQs.toString(), params.toArray()));
+        sqlQryQs.append(sqlCond);
+        
+        // 排序
+        StringBuffer sqlOrder = new StringBuffer();
+        Map<String, String> orderMap = new HashMap<String, String>() {
+            private static final long serialVersionUID = 1l;
+            {   put("qsId:A",          "qs_id ASC");
+                put("qsId:D",          "A.qs_id DESC");
+                put("qsNamed:A",       "B.qs_name ASC");
+                put("qsName:D",        "B.qs_name DESC");
+                put("totalOptClass:A", "A.total_opt_class ASC");
+                put("totalOptClass:D", "A.total_opt_class DESC");
+                put("totalScore:A",    "A.total_score ASC");
+                put("totalScore:D",    "A.total_score DESC");
+                put("passScore:A",     "A.pass_score ASC");
+                put("passScore:D",     "A.pass_score DESC");
+                put("borderline:A",    "A.borderline ASC");
+                put("borderline:D",    "A.borderline DESC");
+                put("fract:A",         "A.fract ASC");
+                put("fract:D",         "A.fract DESC");
+            }
+        };
+        for (int i = 0; ; i++) {
+            String key = "order[" + i + "]";
+            if (!req.containsKey(key))
+                break;
+            String order = req.get(key);
+            if (!orderMap.containsKey(order))
+                break;
+            if (i == 0)
+                sqlOrder.append(" ORDER BY ");
+            else
+                sqlOrder.append(", ");
+            sqlOrder.append(orderMap.get(order));
+        }
+        sqlQryQs.append(sqlOrder);
+
+        if (pageRow != 0) {
+            sqlQryQs.append(" OFFSET ? LIMIT ?\n");
+            params.add(pageAt * pageRow);
+            params.add(pageRow);
+        }
+
+        // 結果
+        ResultSet rsQs = dbu.queryArray(sqlQryQs.toString(), params.toArray());
+        List<Map<String, Object>> qsList = new ArrayList<Map<String, Object>>();
+        while (rsQs.next()) {
+            Map<String, Object> qs = new HashMap<String, Object>();
+            qs.put("qsId",          rsQs.getString("qs_id"));
+            qs.put("qsName",        rsQs.getString("qs_name"));
+            qs.put("totalOptClass",    rsQs.getString("total_opt_class"));
+            qs.put("totalScore",    rsQs.getString("total_score"));
+            qs.put("passScore",     rsQs.getString("pass_score"));
+            qs.put("borderline",    rsQs.getString("borderline"));
+            qs.put("fract",         rsQs.getString("fract"));
+            qs.put("crStd",         Integer.parseInt(rsQs.getString("crStd")) > 0 ? "Y" :"N");
+            qsList.add(qs);
+        }
+        rsQs.close();
+        
+        return qsList;
+	}
 
 	/**
 	 * 查詢教案列表
 	 * @param req
 	 * @return
 	 */
-	@RequestMapping(value = "/ScMntMast_qryQsList", method = RequestMethod.POST)
-	public @ResponseBody Map<String, Object> qryQsList(@RequestParam Map<String, String> req) {
+	@RequestMapping(value = "/ScMntMast_qryQs", method = RequestMethod.POST)
+	public @ResponseBody Map<String, Object> qryQs(@RequestParam Map<String, String> req) {
 		Map<String, Object> res = new HashMap<String, Object>();
 		res.put("status", "");
 		res.put("statusTime", new StdCalendar().toTimesString());
@@ -108,153 +285,13 @@ public class ScMntMastAction {
 		DbUtil dbu = new DbUtil();
 		try {	
 			res.put("success",  false);
-			int pageRow = Integer.MAX_VALUE;
-			int pageAt  = 0;
-			try {
-				pageRow = Integer.parseInt(req.get("pageRow"));
-				if (pageRow <= 0)
-					pageRow = Integer.MAX_VALUE;
-			}
-			catch (Exception e) {
-			}
-			try {
-				pageAt = Integer.parseInt(req.get("pageAt")) - 1;
-				if (pageAt < 0)
-					pageAt = 0;
-			}
-			catch (Exception e) {
-			}
 			
-			// 查詢條件
-			StringBuffer sqlQryQs = new StringBuffer(
-				  " SELECT A.qs_id, B.qs_name, A.total_opt_class, A.total_score, A.pass_score, A.borderline, A.fract, \n"
-			    + "        ( SELECT COUNT(*) FROM scqstd WHERE qs_id = A.qs_id) crStd \n");
-			StringBuffer sqlCntQs = new StringBuffer(" SELECT COUNT(*)");
-			StringBuffer sqlCond = new StringBuffer(
-				  "   FROM scqstm A, qsmstr B \n"
-				+ "  WHERE A.qs_id = B.qs_id \n");
-			List<Object> params = new ArrayList<Object>();
+			res.put("totalOptClassList", qryOptClassList("T", dbu));
+            res.put("fractList", qryOptClassList("M", dbu));
 			
-			// 教案代碼
-			String qryQsId = req.get("qsId");
-			if (!qryQsId.isEmpty()) {
-				sqlCond.append(" AND A.qs_id LIKE '%' || ? || '%'\n");
-				params.add(qryQsId);
-			}
-			
-			// 教案名稱
-			String qryQsName = req.get("qsName");
-			if (!qryQsName.isEmpty()) {
-				sqlCond.append(" AND B.qs_name LIKE '%' || ? || '%'\n");
-				params.add(qryQsName);
-			}
-						
-			// 科別
-			String qryDepart = req.get("departId");
-			if (!qryDepart.isEmpty()) {
-				sqlCond.append(" AND B.depart_id = ?\n");
-				params.add(qryDepart);
-			}
-			
-			// 對象
-			String qryTargetId = req.get("targetId");
-			if (!qryTargetId.isEmpty()) {
-				sqlCond.append(" AND B.target_id = ?\n");
-				params.add(qryTargetId);
-			}
-			
-			// 測驗類別
-			List<String> qryQsClassList = new ArrayList<String>();
-			for (int i = 0; ; i++) {
-				String key = "qryQsClass[" + i + "]";
-				if (!req.containsKey(key))
-					break;
-				qryQsClassList.add(req.get(key));
-			}
-			if (qryQsClassList.size() > 0) {
-				sqlCond.append(" AND EXISTS(SELECT class_id FROM qsclss C WHERE a.qs_id = C.qs_id AND C.class_type = 'C' AND class_id IN ");
-				DbUtil.buildInSqlParam(sqlCond, params, qryQsClassList);
-				sqlCond.append(")\n");
-			}
-			
-			// 核心能力
-			List<String> qryAbilityList = new ArrayList<String>();
-			for (int i = 0; ; i++) {
-				String key = "qryQsAbility[" + i + "]";
-				if (!req.containsKey(key))
-					break;
-				qryAbilityList.add(req.get(key));
-			}
-			if (qryAbilityList.size() > 0) {
-				sqlCond.append(" AND EXISTS(SELECT class_id FROM qsclss C WHERE a.qs_id = C.qs_id AND C.class_type = 'A' AND class_id IN ");
-				DbUtil.buildInSqlParam(sqlCond, params, qryAbilityList);
-				sqlCond.append(")\n");
-			}
-
-			sqlCntQs.append(sqlCond);
-			res.put("total", dbu.selectIntArray(sqlCntQs.toString(), params.toArray()));
-			sqlQryQs.append(sqlCond);
-			
-			// 排序
-			StringBuffer sqlOrder = new StringBuffer();
-			Map<String, String> orderMap = new HashMap<String, String>() {
-				private static final long serialVersionUID = 1l;
-				{	put("qsId:A",          "qs_id ASC");
-					put("qsId:D",          "A.qs_id DESC");
-					put("qsNamed:A",       "B.qs_name ASC");
-					put("qsName:D",        "B.qs_name DESC");
-					put("totalOptClass:A", "A.total_opt_class ASC");
-					put("totalOptClass:D", "A.total_opt_class DESC");
-					put("totalScore:A",    "A.total_score ASC");
-					put("totalScore:D",    "A.total_score DESC");
-					put("passScore:A",     "A.pass_score ASC");
-					put("passScore:D",     "A.pass_score DESC");
-					put("borderline:A",    "A.borderline ASC");
-					put("borderline:D",    "A.borderline DESC");
-					put("fract:A",         "A.fract ASC");
-					put("fract:D",         "A.fract DESC");
-				}
-			};
-			for (int i = 0; ; i++) {
-				String key = "order[" + i + "]";
-				if (!req.containsKey(key))
-					break;
-				String order = req.get(key);
-				if (!orderMap.containsKey(order))
-					break;
-				if (i == 0)
-					sqlOrder.append(" ORDER BY ");
-				else
-					sqlOrder.append(", ");
-				sqlOrder.append(orderMap.get(order));
-			}
-			sqlQryQs.append(sqlOrder);
-
-			if (pageRow != 0) {
-				sqlQryQs.append(" OFFSET ? LIMIT ?\n");
-				params.add(pageAt * pageRow);
-				params.add(pageRow);
-			}
-
-			// 結果
-			Map<String, String> totalOptClassMap = CodeSvc.buildStringRankMap(dbu, "T");
-			ResultSet rsQs = dbu.queryArray(sqlQryQs.toString(), params.toArray());
-			List<Map<String, Object>> qsList = new ArrayList<Map<String, Object>>();
-			while (rsQs.next()) {
-				Map<String, Object> qs = new HashMap<String, Object>();
-				qs.put("qsId",          rsQs.getString("qs_id"));
-				qs.put("qsName",        rsQs.getString("qs_name"));
-				qs.put("totalOptClass", totalOptClassMap.get(rsQs.getString("total_opt_class")));
-				qs.put("totalScore",    rsQs.getString("total_score"));
-				qs.put("passScore",     rsQs.getString("pass_score"));
-				qs.put("borderline",    rsQs.getString("borderline"));
-				qs.put("fract",         rsQs.getString("fract"));
-				qs.put("crStd",         Integer.parseInt(rsQs.getString("crStd")) > 0 ? "Y" :"N");
-				qsList.add(qs);
-			}
-			rsQs.close();
+			List<Map<String, Object>> qsList = qryQsList(req,dbu);
 			res.put("qsList", qsList);
-			
+			res.put("total", qsList.size());
 			res.put("success", true);
 			res.put("status", "查詢題目列表完成");
 		}
@@ -274,6 +311,7 @@ public class ScMntMastAction {
 	 * @param req
 	 * @return
 	 */
+	/*
 	@RequestMapping(value = "/ScMntMast_qryQs", method = RequestMethod.POST)
 	public @ResponseBody Map<String, Object> qryQs(@RequestParam Map<String, String> req) {
 		Map<String, Object> res = new HashMap<String, Object>();
@@ -283,7 +321,8 @@ public class ScMntMastAction {
 		DbUtil dbu = new DbUtil();
 		try {
 			res.put("success", false);
-			res.put("totalOptClassList", CodeSvc.buildSelectRankData(dbu, "T", true,  true));
+			res.put("totalOptClassList", qryOptClassList("T", dbu));
+			res.put("fractList", qryOptClassList("M", dbu));
 
 			String qsId = req.get("qsId");
 			if (qsId != null) {
@@ -329,7 +368,7 @@ public class ScMntMastAction {
 		dbu.relDbConn();
 		
 		return res;
-	}
+	}*/
 	
 	/**
 	 * 新增教案
@@ -528,7 +567,7 @@ public class ScMntMastAction {
 		DbUtil dbu = new DbUtil();
 		try {
 			res.put("success", false);
-			res.put("optClassList", CodeSvc.buildSelectRankData(dbu, "M" + req.get("fract"), true, true));
+			//res.put("optClassList", CodeSvc.buildSelectRankData(dbu, "M" + req.get("fract"), true, true));
 
 			String qsId = req.get("qsId");
 			if (qsId != null) {

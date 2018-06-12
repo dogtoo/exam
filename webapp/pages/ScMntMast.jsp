@@ -46,7 +46,7 @@ function qryQsList() {
 		req["order[" + i + "]"] = orders[i];
 	req.pageRow = $("#pg").pagination("options").pageSize;
 	req.pageAt = $("#pg").pagination("options").pageNumber;
-	$.post("ScMntMast_qryQsList", req, function (res) {
+	$.post("ScMntMast_qryQs", req, function (res) {
 		parent.showStatus(res);
 		if (res.success) {
 			if ('total' in res)
@@ -140,16 +140,16 @@ function modQs(src) {
 			$("#qsEdit"           ).dialog("open");
 			$("#qsEditMode"       ).val("M");
 			$("#qsEdit .modPane"  ).css("visibility",    "visible");
-			$("#editQsIdOrg"      ).textbox("setValue",  req.qsId);
-			$("#editQsId"         ).textbox("setValue",  req.qsId);
-			$("#editQsName"       ).textbox("setValue",  res.qsName);
+			$("#editQsIdOrg"      ).textbox("setValue",  res.qsList[0].qsId);
+			$("#editQsId"         ).textbox("setValue",  res.qsList[0].qsId);
+			$("#editQsName"       ).textbox("setValue",  res.qsList[0].qsName);
 			$("#editTotalOptClass").combobox("loadData", res.totalOptClassList);
-			$("#editTotalOptClass").combobox("setValue", res.totalOptClass);
-			$("#editTotalScore"   ).textbox("setValue",  res.totalScore);
-			$("#editPassScore"    ).textbox("setValue",  res.passScore);
-			$("#editBorderline"   ).textbox("setValue",  res.borderline);
+			$("#editTotalOptClass").combobox("setValue", res.qsList[0].totalOptClass);
+			$("#editTotalScore"   ).textbox("setValue",  res.qsList[0].totalScore);
+			$("#editPassScore"    ).textbox("setValue",  res.qsList[0].passScore);
+			$("#editBorderline"   ).textbox("setValue",  res.qsList[0].borderline);
 			$("#editFract"        ).combobox("loadData", res.fractList);
-			$("#editFract"        ).combobox("setValue", res.fract);
+			$("#editFract"        ).combobox("setValue", res.qsList[0].fract);
 		}
 	}, "json");
 }
@@ -652,7 +652,7 @@ function clearAll() {
 			<tr>
 				<td>整體評分分級</td>
 				<td>
-					<input id="editTotalOptClass" class="easyui-combobox" style="width: 250px;" data-options="editable: false, panelHeight: 'auto'"/>
+					<input id="editTotalOptClass" class="easyui-combobox" style="width: 250px;" />
 				</td>
 			</tr>
 			<tr>
@@ -749,5 +749,22 @@ function clearAll() {
 <script type="text/javascript">
     parent.showProg({ id: $("#progId").val(), priv: $("#privDesc").val(), title: $("#progTitle").val() });
     parent.showStatus({ status: $("#status").val(), statusTime: $("#statusTime").val() });
+    
+    $("#editTotalOptClass").combobox({
+        editable: false,
+        panelHeight: 'auto',
+        valueField:'optClass',
+        textField:'optDesc'
+    });
+    
+    $("#editFract").combobox({
+        editable: false,
+        panelHeight: 'auto',
+        valueField:'fract',
+        formatter: function(row){
+    		return row['optClass'] + '級分';
+    	}
+    });
+    
 </script>
 </html>
