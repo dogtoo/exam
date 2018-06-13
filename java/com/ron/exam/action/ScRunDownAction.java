@@ -170,9 +170,10 @@ public class ScRunDownAction {
             //排除同天非本梯次已有指派的人員
             List<Map<String, Object>> userList;
             if (examiner.equals("Y")) {
-                sqlUser = "select user_id \"examiner\", user_name \"examinerName\" \n" 
-                        + "  from cmuser \n"
-                        + " where 1=1 \n"
+                sqlUser = "select a.user_id \"examiner\", a.user_name \"examinerName\" \n" 
+                        + "  from cmuser a, mbdetl b \n"
+                        + " where a.user_id = b.user_id \n"
+                        + "   and b.mb_type = 'E' \n"
                         //先不排除 Mark掉
                         /*
                         + " where user_id not in ( \n"
@@ -181,18 +182,22 @@ public class ScRunDownAction {
                         + "                        where a.rd_id = b.rd_id \n"
                         + "                          and b.rd_id != ? \n"
                         + "                          and b.rd_date = ?) \n"*/
-                        + "   and (coalesce(?, '') = '' OR user_id like '%' || ? || '%' OR user_name like '%' || ? || '%'); \n";
+                        + "   and (coalesce(?, '') = '' OR a.user_id like '%' || ? || '%' OR a.user_name like '%' || ? || '%'); \n";
                 //userList = dbu.selectMapAllList(sqlUser, rdId, rdDate, param, param, param);
                 userList = dbu.selectMapAllList(sqlUser, param, param, param);
             }
             else {
-                if (examiner.equals("S"))
-                    sqlUser = "select user_id \"examineeId\", user_name \"examineeName\" \n";
-                else
-                    sqlUser = "select user_id \"patient\", user_name \"patientName\" \n";
+                if (examiner.equals("S")) {
+                    sqlUser = "select user_id \"examineeId\", user_name \"examineeName\" \n"
+                            + "  from mbdetl \n"
+                            + " where mb_type = 'S'";
+                }
+                else {
+                    sqlUser = "select user_id \"patient\", user_name \"patientName\" \n"
+                            + "  from mbdetl \n"
+                            + " where mb_type = 'P'";
+                }
                 
-                sqlUser +="  from mbdetl \n"
-                        + " where 1=1 \n"
                         //先不排除 Mark掉
                         /*
                         + " where user_id not in (select coalesce(patient1, ' ') \n"
@@ -210,7 +215,7 @@ public class ScRunDownAction {
                         + "                        where a.rd_id = b.rd_id \n"
                         + "                          and b.rd_id != ? \n"
                         + "                          and b.rd_date = ? ) \n"*/
-                        + "   and (coalesce(?, '') = '' OR user_id like '%' || ? || '%' OR user_name like '%' || ? || '%'); \n";
+                sqlUser += "   and (coalesce(?, '') = '' OR user_id like '%' || ? || '%' OR user_name like '%' || ? || '%'); \n";
                 //userList = dbu.selectMapAllList(sqlUser, rdId, rdDate, rdId, rdDate, rdId, rdDate, param, param, param);
                 userList = dbu.selectMapAllList(sqlUser, param, param, param);
             }

@@ -322,7 +322,7 @@ public class MntMemberAction {
 			String userId = req.get("userId");
 			if (userId != null) {
 				String sqlQryMember =
-					  " SELECT user_name, depart_id, user_no, mobile_no, address, email, begin_date, end_date\n"
+					  " SELECT user_name, depart_id, user_no, mobile_no, address, email, begin_date, end_date, mb_type\n"
 					+ "   FROM mbdetl\n"
 					+ "  WHERE user_id = ?\n";
 				Map<String, Object> rowMember = dbu.selectMapRowList(sqlQryMember, userId);
@@ -336,7 +336,8 @@ public class MntMemberAction {
 				res.put("email", (String) rowMember.get("email"));
 				res.put("beginDate", "00000000".equals(rowMember.get("begin_date")) ? "" : new StdCalendar((String) rowMember.get("begin_date")).toDateString());
 				res.put("endDate", "99999999".equals(rowMember.get("end_date")) ? "" : new StdCalendar((String) rowMember.get("end_date")).toDateString());
-
+				res.put("mbType", (String) rowMember.get("mb_type"));
+				
 				String sqlQryUser =
 					  " SELECT init_pass, menu_id, remark\n"
 					+ "   FROM cmuser\n"
@@ -393,7 +394,7 @@ public class MntMemberAction {
 			if (userName.isEmpty())
 				throw new StopException("姓名不可以為空白");
 			String departId = req.get("departId");
-			String sqlCntDepart = "SELECT COUNT(*) FROM cmparm WHERE param_class = ? AND param_id = ?";
+			String sqlCntDepart = "SELECT COUNT(*) FROM cmpard WHERE param_class = ? AND param_id = ?";
 			if (dbu.selectIntList(sqlCntDepart, ParamSvc.c_clsDepart, departId) == 0)
 				throw new StopException("科系代碼 <" + departId + "> 不存在");
 			String userNo = DbUtil.emptyToNull(req.get("userNo"));
@@ -410,6 +411,7 @@ public class MntMemberAction {
 			endDate = endDate.isEmpty() ? "99999999" : new StdCalendar(endDate).toDbDateString();
 			if (beginDate.compareTo(endDate) > 0)
 				throw new StopException("生效日期不可在失效日期之後");
+			String mbType = DbUtil.emptyToNull(req.get("mbType"));
 			boolean alterUser = "Y".equals(req.get("alterUser"));
 			String initPass = req.get("initPass");
 			String menuId = req.get("menuId");
@@ -438,10 +440,10 @@ public class MntMemberAction {
 			
 			String sqlInsMember =
 				  " INSERT INTO mbdetl(user_id, user_name, depart_id, user_no, mobile_no,\n"
-				+ "        address, email, begin_date, end_date)\n"
-				+ " VALUES(?, ?, ?, ?, ?,  ?, ?, ?, ?)\n";
+				+ "        address, email, begin_date, end_date, mb_type)\n"
+				+ " VALUES(?, ?, ?, ?, ?,  ?, ?, ?, ?, ?)\n";
 			dbu.executeList(sqlInsMember, userId, userName, departId, userNo, mobileNo,
-				address, email, beginDate, endDate);
+				address, email, beginDate, endDate, mbType);
 			if (alterUser) {
 				String sqlInsUser =
 					  " INSERT INTO cmuser(user_id, user_name, menu_id, init_pass, user_pass,\n"
@@ -465,6 +467,7 @@ public class MntMemberAction {
             operLog.add("email", email);
             operLog.add("beginDate", beginDate);
             operLog.add("endDate", endDate);
+            operLog.add("mbType", mbType);
             if (alterUser) {
 				operLog.add("menuId", menuId);
 				operLog.add("initPass", initPass);
@@ -505,16 +508,20 @@ public class MntMemberAction {
 			
 			String userIdOrg = req.get("userIdOrg").toUpperCase();
 			String userId = req.get("userId").toUpperCase();
-			String sqlCntMember = " SELECT COUNT(*) FROM cmuser WHERE user_id = ?";
-			if (dbu.selectIntList(sqlCntMember, userIdOrg) == 0)
-				throw new StopException("原帳號 <" + userIdOrg + "> 不存在");
-			if (!userId.equals(userIdOrg) && dbu.selectIntList(sqlCntMember, userId) > 0)
-				throw new StopException("帳號 <" + userId + "> 已存在");
+			boolean alterUser = "Y".equals(req.get("alterUser"));
+			// 有去改登入帳號才檢查
+			if (alterUser) {
+    			String sqlCntMember = " SELECT COUNT(*) FROM cmuser WHERE user_id = ?";
+    			if (dbu.selectIntList(sqlCntMember, userIdOrg) == 0)
+    				throw new StopException("原帳號 <" + userIdOrg + "> 不存在");
+    			if (!userId.equals(userIdOrg) && dbu.selectIntList(sqlCntMember, userId) > 0)
+    				throw new StopException("帳號 <" + userId + "> 已存在");
+			}
 			String userName = req.get("userName");
 			if (userName.isEmpty())
 				throw new StopException("姓名不可以為空白");
 			String departId = req.get("departId");
-			String sqlCntDepart = "SELECT COUNT(*) FROM cmparm WHERE param_class = ? AND param_id = ?";
+			String sqlCntDepart = "SELECT COUNT(*) FROM cmpard WHERE param_class = ? AND param_id = ?";
 			if (dbu.selectIntList(sqlCntDepart, ParamSvc.c_clsDepart, departId) == 0)
 				throw new StopException("科系代碼 <" + departId + "> 不存在");
 			String userNo = DbUtil.emptyToNull(req.get("userNo"));
@@ -531,7 +538,8 @@ public class MntMemberAction {
 			endDate = endDate.isEmpty() ? "99999999" : new StdCalendar(endDate).toDbDateString();
 			if (beginDate.compareTo(endDate) > 0)
 				throw new StopException("生效日期不可在失效日期之後");
-			boolean alterUser = "Y".equals(req.get("alterUser"));
+			String mbType = DbUtil.emptyToNull(req.get("mbType"));
+			
 			String initPass = req.get("initPass");
 			String menuId = req.get("menuId");
 			String remark = DbUtil.emptyToNull(req.get("remark"));
@@ -562,7 +570,7 @@ public class MntMemberAction {
 			}
 			
 			String sqlQryMember =
-				  " SELECT user_name, depart_id, user_no, mobile_no, address, email, begin_date, end_date\n"
+				  " SELECT user_name, depart_id, user_no, mobile_no, address, email, begin_date, end_date, mb_type\n"
 				+ "   FROM mbdetl\n"
 				+ "  WHERE user_id = ?\n";
 			Map<String, Object> rowMember = dbu.selectMapRowList(sqlQryMember, userIdOrg);
@@ -576,6 +584,7 @@ public class MntMemberAction {
 			String emailOrg = (String) rowMember.get("email");
 			String beginDateOrg = (String) rowMember.get("begin_date");
 			String endDateOrg = (String) rowMember.get("end_date");
+			String mbTypeOrg = (String) rowMember.get("mb_type");
 			String menuIdOrg = null;
 			String initPassOrg = null;
 			String remarkOrg = null;
@@ -606,9 +615,10 @@ public class MntMemberAction {
 				+ "      , email = ?\n"
 				+ "      , begin_date = ?\n"
 				+ "      , end_date = ?\n"
+				+ "      , mb_type = ?\n"
 				+ "  WHERE user_id = ?\n";
 			dbu.executeList(sqlUpdMember, userId, userName, departId, userNo, mobileNo, address, email,
-				beginDate, endDate, userIdOrg);
+				beginDate, endDate, mbType, userIdOrg);
 			if (!userIdOrg.equals(userId)) {
 				// 變更 userId 一併修改相關資料
 				updateUserId(dbu, userId, userIdOrg);
@@ -646,6 +656,7 @@ public class MntMemberAction {
             operLog.add("email", emailOrg, email);
             operLog.add("beginDate", beginDateOrg, beginDate);
             operLog.add("endDate", endDateOrg, endDate);
+            operLog.add("mbType", mbTypeOrg, mbType);
             if (alterUser) {
 				operLog.add("menuId", menuIdOrg, menuId);
 				operLog.add("initPass", initPassOrg, initPass);

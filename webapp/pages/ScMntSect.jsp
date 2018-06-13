@@ -326,7 +326,7 @@ function editRdRoom(){
             });
         },
         onSelect: function(rec){
-            $("#patient1Id").val(rec.roomId);
+            $("#patient1Id").val(rec.patient);
         }
     });
     
@@ -351,7 +351,7 @@ function editRdRoom(){
             });
         },
         onSelect: function(rec){
-            $("#patient2Id").val(rec.roomId);
+            $("#patient2Id").val(rec.patient);
         }
     });
     
@@ -376,7 +376,7 @@ function editRdRoom(){
             });
         },
         onSelect: function(rec){
-            $("#patient3Id").val(rec.roomId);
+            $("#patient3Id").val(rec.patient);
         }
     });
     
