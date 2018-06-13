@@ -21,9 +21,9 @@
 /*
  * 查詢教案。
  */
-function qryQsList() {
+function qryQsList(pageNumber, pageSize) {
     var req = {};
-    $("#pg").pagination({ total: 1, pageNumber: 1 });
+    //$("#pg").pagination({ total: 1, pageNumber: 1 });
     var queryCond1      = {};
     queryCond1._job     = 'ScMntMast';
     queryCond1.qsId     = $("#qryQsId"    ).textbox("getValue");
@@ -44,13 +44,25 @@ function qryQsList() {
     var orders = $("#order").combobox("getValues");
     for (var i = 0; i < orders.length; i++)
         req["order[" + i + "]"] = orders[i];
-    req.pageRow = $("#pg").pagination("options").pageSize;
-    req.pageAt = $("#pg").pagination("options").pageNumber;
+    req.pageRow = (pageSize!=null) ? pageSize : $("#pg").pagination("options").pageSize;
+    req.pageAt = (pageNumber!=null) ? pageNumber : $("#pg").pagination("options").pageNumber;
     $.post("ScMntMast_qryQs", req, function (res) {
         parent.showStatus(res);
         if (res.success) {
             if ('total' in res)
                 $("#pg").pagination({ total: res.total });
+            
+            var optClassText = {};
+            $.each(res.totalOptClassList, function(i, v) {
+                optClassText[res.totalOptClassList[i].optClass] = res.totalOptClassList[i].optDesc;
+            });
+            
+            var fractText = {};
+            $.each(res.fractList, function(i, v) {
+                if (v != "")
+                    fractText[res.fractList[i].value] = res.fractList[i].text;
+            });
+            
             var jqsList = $("#qsList");
             var widthSum = 15;
             var widthList = jqsList.parent().prev().find("table.listHead td").map(function () { widthSum += $(this).width();    return $(this).width(); });
@@ -67,7 +79,7 @@ function qryQsList() {
                     "    <input name='qsName'        type='text' style='width: " + widthList[wat++] + "px;' readonly value='" + qs.qsName        + "' />\n" +
                     "</td>\n" +
                     "<td>\n" +
-                    "    <input name='totalOptClass' type='text' style='width: " + widthList[wat++] + "px;' readonly value='" + qs.totalOptClass + "' />\n" +
+                    "    <input name='totalOptClass' type='text' style='width: " + widthList[wat++] + "px;' readonly value='" + ((qs.totalOptClass!="") ? optClassText[qs.totalOptClass] : "") + "' />\n" +
                     "</td>\n" +
                     "<td>\n" +
                     "    <input name='totalScore'    type='text' style='width: " + widthList[wat++] + "px;' readonly value='" + qs.totalScore    + "' />\n" +
@@ -79,17 +91,20 @@ function qryQsList() {
                     "    <input name='borderline'    type='text' style='width: " + widthList[wat++] + "px;' readonly value='" + qs.borderline    + "' />\n" +
                     "</td>\n" +
                     "<td>\n" +
-                    "    <input name='fract'         type='text' style='width: " + widthList[wat++] + "px;' readonly value='" + qs.fract         + "' />\n" +
+                    "    <input name='fract'         type='text' style='width: " + widthList[wat++] + "px;' readonly value='" + ((qs.fract!="")? fractText[qs.fract] : "") + "' />\n" +
                     "</td>\n" +
                     "<td>\n" +
                     "    <input name='crStd'         type='text' style='width: " + widthList[wat++] + "px;' readonly value='" + qs.crStd         + "' />\n" +
                     "</td>\n" +
                     "<td>\n" +
-                    "    <span style='width: " + widthList[wat++] + "px; display: inline-block; text-align: center;'>\n" +
-                    "                    <button type='button' style='width: 75px;' onclick='modQs(this);'  >編輯教案</button>\n" +
+                    "    <span style='width: " + widthList[wat++] + "px; display: inline-block; text-align: left;'>\n" +
+                    "                    <button type='button' style='width: 75px;' onclick='modQs(this);'  >編輯教案</button>\n" ;
                     //"        &nbsp;&nbsp;<button type='button' style='width: 75px;' onclick='copQs(this);'  >複製教案</button>\n" +
-                    "        &nbsp;&nbsp;<button type='button' style='width: 75px;' onclick='modItem(this);'>編輯項目</button>\n" +
-                    "        &nbsp;&nbsp;<button type='button' style='width: 45px;' onclick='delQs(this);'  >刪除</button>\n" +
+                    if (qs.totalOptClass != "") {
+                        append +="        &nbsp;&nbsp;<button type='button' style='width: 75px;' onclick='modItem(this);'>編輯項目</button>\n"
+                    		   + "        &nbsp;&nbsp;<button type='button' style='width: 45px;' onclick='delQs(this);'  >刪除</button>\n";
+                    }
+                    append +=
                     "    </span>\n" +
                     "</td>\n" +
                     "</tr>\n";

@@ -197,6 +197,14 @@ function addMember() {
 			$("#editMenuId").combobox("setValue", "");
 			$("#editRemark").textbox("setValue", "");
 			$("#roleList").datagrid("uncheckAll");
+			$("#mbType").combobox({
+			    editable: false, 
+			    panelHeight: 'auto',
+			    valueField:'value',
+			    textField:'text',
+			    data: res.mbTypeList
+			});
+			$("#mbType").combobox("setValue","");
 		}
 	}, "json");
 }
@@ -230,6 +238,16 @@ function modMember(src) {
 			$("#editMenuId").combobox("setValue", res.menuId);
 			$("#editInitPass").textbox("setValue", res.initPass);
 			$("#editRemark").textbox("setValue", res.remark);
+			
+			$("#mbType").combobox({
+			    editable: false, 
+			    panelHeight: 'auto',
+			    valueField:'value',
+			    textField:'text',
+			    data: res.mbTypeList
+			});
+			$("#mbType").combobox("setValue",res.mbType);
+			
 			var jroleList = $("#roleList");
 			jroleList.datagrid("uncheckAll");
 			for (var i = 0; i < res.userRoleList.length; i++)
@@ -260,6 +278,7 @@ function memberEditDone() {
 	req.alterUser = $("#alterUser").switchbutton("options").checked ? "Y" : "N";
 	req.menuId = $("#editMenuId").textbox("getValue");
 	req.initPass = $("#editInitPass").textbox("getValue");
+	req.mbType = $("#mbType").combobox("getValue");
 	if ($("#memberEditMode").val() == "A") {
 		$.post("MntMember_addMember", req, function (res) {
 			parent.showStatus(res);
@@ -442,7 +461,7 @@ function delMember(src) {
 		</table>
 	</div>
 </div>
-<div id="memberEdit" class="easyui-dialog" style="width: 700px; height: 400px; display: none;"
+<div id="memberEdit" class="easyui-dialog" style="width: 700px; height: 450px; display: none;"
 	data-options="modal: true, title: '編輯人員資料', closed: true, onClose: memberEditClose">
 	<input id="memberEditMode" type="hidden" />
 	<div style="float: left;">
@@ -506,6 +525,12 @@ function delMember(src) {
 					<td>失效日期</td>
 					<td>
 						<input id="editEndDate" class="easyui-datebox" style="width: 250px;" />
+					</td>
+				</tr>
+				<tr>
+					<td>人員類別</td>
+					<td>
+						<input id="mbType" class="easyui-combobox" style="width: 250px;" />
 					</td>
 				</tr>
 				<tr>

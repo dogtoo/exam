@@ -417,6 +417,19 @@ public class ScSetScoreAction {
             String  qryRdId    = req.get("rdId");
             Integer qryRoomSeq = Integer.parseInt(req.get("roomSeq"));
             Integer qrySectSeq = Integer.parseInt(req.get("sectSeq"));
+            String  qryQsId    = req.get("qsId");
+            
+            // 整體級分清單
+            StringBuffer sqlQryTotalOptClass = new StringBuffer(
+                    "SELECT total_opt_class \"totalOptClass\" "
+                  + "  FROM scqstm "
+                  + " WHERE qs_id = ?");
+            
+            String totalOptClass = dbu.selectStringList(sqlQryTotalOptClass.toString(), qryQsId);
+            
+            ScMntMastAction scMntMast = new ScMntMastAction();
+            List<Map<String, Object>> totOptClassList = scMntMast.qryOptClassList(totalOptClass, dbu);
+            res.put("totOptClassList", totOptClassList);
             
             // 整體
             StringBuffer sqlQryTot = new StringBuffer(
@@ -509,7 +522,7 @@ public class ScSetScoreAction {
                     " UPDATE scrddm  \n"
                   + "    SET score    = ? \n"
                   + "      , result   = ? \n"
-                  //+ "      , opt_id   = ? \n" 不知要這欄位做什
+                  + "      , opt_id   = ? \n"
                   + "  WHERE rd_id    = ? \n"
                   + "    AND room_seq = ? \n"
                   + "    AND sect_seq = ? \n";
@@ -538,12 +551,14 @@ public class ScSetScoreAction {
                 result = "BOR";
             else if (score < borderline)
                 result = "FAI";
-            dbu.executeList(sqlUpQsmstr, score, result, rdId, roomSeq, sectSeq);
+            String optId = req.get("optId");
+            dbu.executeList(sqlUpQsmstr, score, result, optId, rdId, roomSeq, sectSeq);
             dbu.doCommit();
             
             res.put("score",  score);
             res.put("result", result);
             res.put("success", true);
+            res.put("status", "評分完成");
         }
         catch (StopException e) {
             res.put("status", e.getMessage());

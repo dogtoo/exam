@@ -94,7 +94,7 @@ public class ScMntMastAction {
 		return "ScMntMast";
 	}
 	
-	private List<Map<String, Object>> qryOptClassList(String optType, DbUtil dbu) throws SQLException, Exception{
+	public List<Map<String, Object>> qryOptClassList(String optType, DbUtil dbu) throws SQLException, Exception{
 	    String sqlQryOptClass = 
 	            "SELECT opt_class \"optClass\", opt_id \"optId\", opt_desc \"optDesc\" \n"
 	          + "  FROM scoptm \n";
@@ -124,7 +124,11 @@ public class ScMntMastAction {
         return optClassList;
     }
 	
-	private List<Map<String, Object>> qryQsList(Map<String, String> req, DbUtil dbu) throws SQLException, Exception{
+	private List<Map<String, Object>> qryQsList(Map<String, String> req, DbUtil dbu) throws SQLException, Exception {
+	    return qryQsList(req, dbu, "L");
+	}
+	
+	private List<Map<String, Object>> qryQsList(Map<String, String> req, DbUtil dbu, String Type) throws SQLException, Exception{
 	    
 	    int pageRow = Integer.MAX_VALUE;
         int pageAt  = 0;
@@ -147,7 +151,7 @@ public class ScMntMastAction {
         StringBuffer sqlQryQs = new StringBuffer(
               " SELECT B.qs_id, B.qs_name, A.total_opt_class, A.total_score, A.pass_score, A.borderline, A.fract, \n"
             + "        ( SELECT COUNT(*) FROM scqstd WHERE qs_id = A.qs_id) crStd \n");
-        //StringBuffer sqlCntQs = new StringBuffer(" SELECT COUNT(*)");
+        StringBuffer sqlCntQs = new StringBuffer(" SELECT COUNT(*) \"TOTAL\"");
         StringBuffer sqlCond = new StringBuffer(
               "   FROM qsmstr B left join scqstm A \n"
             + "     ON A.qs_id = B.qs_id \n"
@@ -210,7 +214,10 @@ public class ScMntMastAction {
             sqlCond.append(")\n");
         }
 
-        //sqlCntQs.append(sqlCond);
+        sqlCntQs.append(sqlCond);
+        if (Type.equals("T")){
+            return dbu.selectMapAllList(sqlCntQs.toString(), params.toArray());
+        }
         //res.put("total", dbu.selectIntArray(sqlCntQs.toString(), params.toArray()));
         sqlQryQs.append(sqlCond);
         
@@ -293,9 +300,8 @@ public class ScMntMastAction {
 			res.put("totalOptClassList", qryOptClassList("T", dbu));
             res.put("fractList", CodeSvc.buildSelectDataByKind(dbu, CodeSvc.c_kindScFractType, true));
 			
-			List<Map<String, Object>> qsList = qryQsList(req,dbu);
-			res.put("qsList", qsList);
-			res.put("total", qsList.size());
+			res.put("qsList", qryQsList(req,dbu));
+			res.put("total", qryQsList(req,dbu,"T").get(0).get("TOTAL"));
 			res.put("success", true);
 			res.put("status", "查詢題目列表完成");
 		}
@@ -378,7 +384,7 @@ public class ScMntMastAction {
 	 * 新增教案
 	 * @param req
 	 * @return
-	 */
+	 
 	@RequestMapping(value = "/ScMntMast_addQs", method = RequestMethod.POST)
 	public @ResponseBody Map<String, Object> addQs(@RequestParam Map<String, String> req) {
 		Map<String, Object> res = new HashMap<String, Object>();
@@ -455,7 +461,8 @@ public class ScMntMastAction {
 		
 		return res;
 	}
-
+	 */
+	
 	/**
 	 * 複製、編輯教案
 	 * @param req

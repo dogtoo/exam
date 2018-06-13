@@ -23,6 +23,7 @@
 //var copyRow;
 //var newRdId;
 var queryTmplData = {};
+var execTime = {};
 $(function(){
     $("#rdmmList").datagrid({
         width:'98%',
@@ -33,21 +34,23 @@ $(function(){
         pagePosition: 'top',
         columns:[[
             {field:'id',hidden:true},
-            {field:'rdId',title:'梯次代碼',width:100},
+            {field:'rdId',title:'梯次代碼',width:95},
             {field:'rdDesc',title:'梯次說明',width:200},
-            {field:'rdDate',title:'梯次日期',width:100, 
+            {field:'rdDate',title:'梯次日期',width:80, 
                 formatter:function(value,row,index){
                     return row.rdDate.substr(0,4) + '/' + row.rdDate.substr(5,2) + '/' + row.rdDate.substr(-2);                    
                 }
             },
-            {field:'begTime',title:'開始時間',width:100, 
+            {field:'begTime',title:'開始時間',width:70, 
                 formatter:function(value,row,index){
                     return row.begTime.substr(0,2) + ':' + row.begTime.substr(-2);                    
                 }
             },
-            {field:'qsCount',title:'試題數量',width:100},
-            {field:'readTime',title:'每節讀題時間',width:110},
-            {field:'examTime',title:'每節考試時間',width:110},
+            {field:'qsCount',title:'試題數量',width:70},
+            {field:'readTime',title:'讀題時間',width:70},
+            {field:'examTime',title:'考試時間',width:70},
+            {field:'fbTime',title:'回饋時間',width:70},
+            {field:'endTime',title:'結束評分時間',width:100},
             {field:'stsR',hidden:true},
             {field:'stsS',hidden:true},
             {field:'stsE',hidden:true},
@@ -195,6 +198,8 @@ function editRd(editType, target) {
         $("#pQsCount").textbox('setValue', row.qsCount);
         $("#pReadTime").textbox('setText', row.readTime);
         $("#pExamTime").textbox('setText', row.examTime);
+        $("#pFbTime").textbox('setText', row.fbTime);
+        $("#pEndTime").textbox('setText', row.endTime);
     }
     else if (editType == 'A') {
         $("#pRdId").textbox('setText', '');
@@ -204,6 +209,8 @@ function editRd(editType, target) {
         $("#pQsCount").textbox('setValue', '');
         $("#pReadTime").textbox('setText', '');
         $("#pExamTime").textbox('setText', '');
+        $("#pFbTime").textbox('setText', '');
+        $("#pEndTime").textbox('setText', '');
     }
     
     //$("#rdEditTable").find(".copy").remove();
@@ -252,6 +259,8 @@ function rdEditDone(editType, target) {
         'pQsCount': $("#pQsCount").textbox('getText'),
         'pReadTime': $("#pReadTime").textbox('getText'),
         'pExamTime': $("#pExamTime").textbox('getText'),
+        'pFbTime': $("#pFbTime").textbox('getText'),
+        'pEndTime': $("#pEndTime").textbox('getText'),
         'editType': editType
     };
     //$.extend(data, queryTmplData);
@@ -271,7 +280,7 @@ function rdEditDone(editType, target) {
     if (editType == 'D') {
         $.messager.confirm({
             title: '確認',
-            msg: '是否要刪除此樣板？',
+            msg: '是否要刪除此梯次？',
             ok: '刪除',
             cancel: '取消',
             fn: function (ok) {
@@ -284,6 +293,7 @@ function rdEditDone(editType, target) {
     {
         rdEditAjaxDone(data);
     }
+    $('#rdEdit').dialog('close');
 }
 
 function rdEditAjaxDone(data) {
@@ -558,6 +568,7 @@ function rdRoomEditDone(editType) {
                 alert('處理' + res.cnt + '筆資料');
                 $("#rdmmList").datagrid('reload',queryTmplData);
             }
+            $('#rdRoomEdit').dialog('close');
         }
     });
 }
@@ -700,27 +711,40 @@ function addRdRoom() {
 function reLoadRdSectSeq() {
     var rows = $('#rdSect').datagrid('getRows');
     var sectRdIdx = 0;
+    var nowExec = new Date(execTime);
+    var fSectTime = new Date(0);
     for (var i=0; i<rows.length; i++) {
+
         var row = rows[i];
         var sectSeq = 0;
-        if (row.sectType == 'REA' || row.sectType == 'EXA') {
+
+        //倒數時間最後處理
+    	if (row.sectType == 'BET' || row.sectType == 'ENT' || row.sectType == 'MED')
+    		continue;
+
+        if (row.sectType == 'REA' || row.sectType == 'EXA' || row.sectType == 'FBT') {
             if (row.sectType == 'REA')
                 sectRdIdx++;
             sectSeq = sectRdIdx;            
-        }            
+        }   
+
+        nowExec.setMinutes(nowExec.getMinutes() + fSectTime.getMinutes());
+        fSectTime = new Date(0,0,0,0,row.sectTime);
+        
         $('#rdSect').datagrid('updateRow', {
             index: i,
             row: {
                 seqNo: i+1,
-                sectSeq: sectSeq
+                sectSeq: sectSeq,
+                execTime: addZero(nowExec.getHours()) + ":" + addZero(nowExec.getMinutes()) + ":" + addZero(nowExec.getSeconds())
             }
-        });     
+        });
     }
 }
 
 //選擇節次類別時設定可輸入欄
 function rdSectInputField(sectType) {
-    $("#btRdSectEdit").attr('disabled', 'disabled');
+    //$("#btRdSectEdit").attr('disabled', 'disabled');
     $("#edSectType").textbox('setText' ,'');
     $("#edSectTime").numberbox('setValue',0);
     $("#edFileName").textbox('setText' ,'');
@@ -732,7 +756,7 @@ function rdSectInputField(sectType) {
     
     if (sectType == 'RES' || sectType == 'SUS' 
         || sectType == 'BET' || sectType == 'ENT' || sectType == 'MED') {
-           $("#btRdSectEdit").removeAttr('disabled');
+           //$("#btRdSectEdit").removeAttr('disabled');
            $("#edSectType").textbox({'readonly':false});
        }
        if (sectType == 'RES' || sectType == 'SUS' )  
@@ -746,7 +770,7 @@ function rdSectInputField(sectType) {
 }
 
 //新增節次類別
-function rdSectAddRow() {
+/*function rdSectAddRow() {
     var row = $('#rdSect').datagrid('getSelected');
     
     var insRow = 1;
@@ -767,26 +791,41 @@ function rdSectAddRow() {
     rdSectInputField('xxxx');
     $("#edSectType").textbox({'readonly':false});
     reLoadRdSectSeq();
-}
+}*/
 
 //節次編輯確認
 function rdSectEditRow() {
-    var row = $('#rdSect').datagrid('getSelected');
+    
+	var row = $('#rdSect').datagrid('getSelected');
     if (row){
+    	if (row.sectType == 'REA' || row.sectType == 'EXA' || row.sectType == 'FBT') {
+    		alert('不可異動讀題、考試、回饋時間!');
+    		return;
+    	}
         index = $('#rdSect').datagrid('getRowIndex', row);
+        $('#rdSect').datagrid('updateRow', {
+            index: index,
+            row:{
+                sectName: $("#edSectType").combobox('getText'),
+                sectType: $("#edSectType").combobox('getValue'),
+                sectTime: $("#edSectTime").numberbox('getValue'),
+                fileName: $("#edFileName").textbox('getText'),
+                relaTime: $("#edRelaTime").numberbox('getValue')
+            }
+        });
     } else {
-        return;
+    	$('#rdSect').datagrid('insertRow', {
+            row:{
+                sectName: $("#edSectType").combobox('getText'),
+                sectType: $("#edSectType").combobox('getValue'),
+                sectTime: $("#edSectTime").numberbox('getValue'),
+                fileName: $("#edFileName").textbox('getText'),
+                relaTime: $("#edRelaTime").numberbox('getValue')
+            }
+        });
     }
-    $('#rdSect').datagrid('updateRow', {
-        index: index,
-        row:{
-            sectName: $("#edSectType").combobox('getText'),
-            sectType: $("#edSectType").combobox('getValue'),
-            sectTime: $("#edSectTime").numberbox('getValue'),
-            fileName: $("#edFileName").textbox('getText'),
-            relaTime: $("#edRelaTime").numberbox('getValue')
-        }
-    });
+    
+    $('#rdSect').datagrid('enableDnd');
     reLoadRdSectSeq();
 }
 
@@ -818,6 +857,7 @@ function rdSectEditDone() {
                 alert('處理' + res.cnt + '筆資料');
                 $("#rdmmList").datagrid('reload',queryTmplData);
             }
+            $('#rdSectEdit').dialog('close');
         }
     });
 
@@ -857,31 +897,38 @@ function rdSectEditDone() {
 
 //顯示主畫面
 function editRdSect(target) {
-    var row = $("#rdmmList").datagrid('getRows')[getRowIndex(target)];
+
+	// 把row的值帶進來
+	var row = $("#rdmmList").datagrid('getRows')[getRowIndex(target)];
+    $("#edBegTime").textbox('setValue', row.begTime);
+    $("#edEndTime").textbox('setValue', row.endTime);
     
+    // 產生執行時間
+    execTime = new Date(row.rdDate);
+	execTime.setHours(row.begTime.substr(0,2), row.begTime.substr(3,2));
+	
     $("#rdSectEdit").dialog({
         closed: false, 
         title: row.rdId + '梯 節次建檔'
     });
-    
     $("#rdSectRdId").val(row.rdId);
     
     $("#rdSect").datagrid({
-        width:'560px',
+        width:'642px',
         height:'350px',
         singleSelect:true,
         idField:'seqNo',
         method:'POST',
         columns:[[
-            {field:'seqNo',hidden:true},
-            {field:'sectSeq',title:'節次',width:40},
-            {field:'sectName',title:'時間類別',width:150},
-            {field:'sectType',hidden:true},
-            {field:'sectTime',title:'時間長度',width:80},
-            {field:'fileName',title:'音效檔名',width:150},
-            {field:'relaTime',title:'相對時間',width:80},
-            {field:'execTime',hidden:true},
-            {field:'process',title:'處理',width:50, 
+            {field:'seqNo',    hidden:true                },
+            {field:'sectSeq',  title:'節次',     width: 40},
+            {field:'sectName', title:'時間類別', width:100},
+            {field:'sectType', hidden:true                },
+            {field:'sectTime', title:'時間長度', width: 80},
+            {field:'fileName', title:'音效檔名', width:170},
+            {field:'relaTime', title:'相對時間', width: 80},
+            {field:'execTime', title:'執行時間', width: 80},
+            {field:'process',  title:'處理',     width: 88,
                 formatter:function(value,row,index){
                     if (row.sectSeq == 0){
                         var s = '<button class="easyui-linkbutton" onclick="rdSectDelRow(this)">刪除</a> ';
@@ -896,6 +943,8 @@ function editRdSect(target) {
             $("#edSectTime").textbox('setValue','');
             $("#edFileName").textbox('setText' ,'');
             $("#edRelaTime").textbox('setValue','');
+            $(this).datagrid('enableDnd');
+            reLoadRdSectSeq();
         },
         onClickRow:function(index, row){
             rdSectInputField(row.sectType);
@@ -903,7 +952,11 @@ function editRdSect(target) {
             $("#edSectTime").textbox('setValue',row.sectTime);
             $("#edFileName").textbox('setText',row.fileName);
             $("#edRelaTime").textbox('setValue',row.relaTime);
-        }
+            $("#btRdSectUpd").html("&nbsp;更新&nbsp;");
+        },
+        onStopDrag: function(){
+        	reLoadRdSectSeq();
+        },
     });
     
     $.ajax({
@@ -913,9 +966,18 @@ function editRdSect(target) {
         dataType: 'json',
         success: function(res) {
             parent.showStatus(res);
-            if (res.success)
-                $('#rdSect').datagrid('loadData',res.sectList);
-            else
+            if (res.success) {
+	            $('#rdSect').datagrid('loadData',res.sectList);
+	            
+	            //回饋時間如果0就不顯示
+	            for (var i=0; i<res.sectList.length; i++) {
+	            	if (res.sectList[i].sectType == 'FBT' && res.sectList[i].sectTime == '0') {
+	            		//alert($("#rdSect").datagrid('getColumnOption','sectTime'));
+	            		//res.sectList[i].hide();
+	            		alert($("#rdSect").datagrid('validateRow',i));
+	            	}
+	            }
+        	} else
                 $('#rdSect').datagrid('loadData',[]);
         }
     });
@@ -930,10 +992,32 @@ function editRdSect(target) {
         }
     })
 }
+
+//節次執行時間若為個位數補0 e.g. 9:5 -> 09:05
+function addZero(i) {
+    if (i < 10) {
+        i = "0" + i;
+    }
+    return i;
+}
+
+//節次重置條件
+function rdSectClean() {
+    $("#edSectType").textbox('setText' ,'');
+    $("#edSectTime").textbox('setValue','');
+    $("#edFileName").textbox('setText' ,'');
+    $("#edRelaTime").textbox('setValue','');
+    $("#edSectType").textbox({'readonly':false});
+    $("#edSectTime").textbox({'readonly':true});
+    $("#edFileName").textbox({'readonly':true});
+    $("#edRelaTime").textbox({'readonly':true});
+    $("#btRdSectUpd").html("&nbsp;插入&nbsp;");
+    $('#rdSect').datagrid('clearSelections');
+}
 //考試節次END
 
 //考生建檔
-//節次重排
+//考生重排
 function reLoadRdExamineeSeq() {
     var pages = $('#rdExaminee').datagrid('getRows');
     for (var i=0; i<pages.length; i++) {
@@ -1000,6 +1084,7 @@ function rdExamineeEditDone(){
             if (res.success) {
                 alert('處理' + res.cnt + '筆資料');
                 $("#rdmmList").datagrid('reload',queryTmplData);
+                $('#rdExamineeEdit').dialog('close');
             }
         }
     });
@@ -1136,7 +1221,7 @@ function editRdExaminee(target) {
     </div>
 </div>
 <!-- 考試梯次建檔畫面 -->
-<div id="rdEdit" class="easyui-dialog" style="width: 380px; height: 400px; display: none;"
+<div id="rdEdit" class="easyui-dialog" style="width: 380px; height: 475px; display: none;"
     data-options="modal: true, title: '梯次建檔', closed: true">
     <div style="float: left;">
         <div style="clear: both;">
@@ -1193,6 +1278,18 @@ function editRdExaminee(target) {
                     </td>
                 </tr>
                 <tr class="modPane">
+                    <td>每節回饋時間(分)</td>
+                    <td>
+                        <input id="pFbTime" class="easyui-numberbox" style="width: 90px;" value="0"/>
+                    </td>
+                </tr>
+                <tr class="modPane">
+                    <td>結束評分時間(分)</td>
+                    <td>
+                        <input id="pEndTime" class="easyui-numberbox" style="width: 90px;" value="0"/>
+                    </td>
+                </tr>
+                <tr class="modPane">
                     <td><label id="pCopyL">複製選項</label></td>
                     <td>
                         <div id="pCopy">
@@ -1234,7 +1331,7 @@ function editRdExaminee(target) {
             </tr>
             <tr>
                 <td>
-                    <button class="easyui-linkbutton" onclick="rdRoomEditDone('E');">儲存考堂</button>
+                    <button class="easyui-linkbutton" onclick="rdRoomEditDone('E');">儲存考站</button>
                 </td>
             </tr>
         </table>
@@ -1242,15 +1339,12 @@ function editRdExaminee(target) {
 </div>
 <!-- 考堂建檔畫面（結束）  -->
 <!-- 考試節次建檔畫面 -->
-<div id="rdSectEdit" class="easyui-dialog" style="width: 690px; height: 520px; display: none;"
+<div id="rdSectEdit" class="easyui-dialog" style="width: 685px; height: 490px; display: none;"
     data-options="modal: true, closed: true">
     <input id="rdSectRdId" type="hidden" />
     <div style="float: left;">
         <table style="margin: 10px 0 0 10px;">
             <tr>
-                <td>
-                    
-                </td>
                 <td>
                     <table>
                         <tr>
@@ -1258,27 +1352,35 @@ function editRdExaminee(target) {
                             <td>長度</td>
                             <td>音效檔名</td>
                             <td>相對時間</td>
+                            <td></td>
+                            <td></td>
+                            <td style="width: 55px;"></td>
+                            <td>開始時間</td>
+                            <td>結束評分時間</td>
                         </tr>
                         <tr>
-                            <td><input id="edSectType" class="easyui-combobox" style="width: 150px;"/></td>
-                            <td><input id="edSectTime" class="easyui-numberbox" style="width: 80px;"/></td>
+                            <td><input id="edSectType" class="easyui-combobox" style="width: 80px;"/></td>
+                            <td><input id="edSectTime" class="easyui-numberbox" style="width: 55px;"/></td>
                             <td><input id="edFileName" class="easyui-textbox" style="width: 150px;"/></td>
-                            <td><input id="edRelaTime" class="easyui-numberbox" style="width: 80px;"/></td>
-                            <td><button id="btRdSectEdit" class="easyui-linkbutton" onclick="rdSectEditRow()">確認</button></td>
+                            <td><input id="edRelaTime" class="easyui-numberbox" style="width: 55px;"/></td>
+                            <td><button id="btRdSectUpd" class="easyui-linkbutton" onclick="rdSectEditRow()">插入</button></td>
+                            <td><button id="btRdSectClear" class="easyui-linkbutton" onclick="rdSectClean()">重置</button></td>
+                            <td></td>
+                            <td><input id="edBegTime" class="easyui-numberbox" style="width: 70px;" data-options="readonly: true"/></td>
+                            <td><input id="edEndTime" class="easyui-numberbox" style="width: 70px;" data-options="readonly: true"/></td>
                         </tr>
                     </table>
                 </td>
             </tr>
             <tr>
-                <td valign="top">
+                <!-- <td valign="top">
                     <button class="easyui-linkbutton" onclick="rdSectAddRow()">插入類別</button>
-                </td>
+                </td> -->
                 <td>
                     <table id="rdSect"></table>
                 </td>
             </tr>
             <tr>
-                <td></td>
                 <td>
                     <button class="easyui-linkbutton" onclick="rdSectEditDone();">儲存節次</button>
                 </td>

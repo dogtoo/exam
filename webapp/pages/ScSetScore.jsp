@@ -178,6 +178,7 @@ function qryItemList(index,row) {
     var req = {'rdId': $("#rdId").textbox('getValue')
     		 , 'roomSeq': $("#roomSeq").val() 
     		 , 'sectSeq': $("#sectSeq").val()
+    		 , 'qsId': $("#qsId").val()
     };
     // 評分查詢 -> 梯次表 -> 評分表
     /*
@@ -204,6 +205,8 @@ function qryItemList(index,row) {
                 $("#optId").textbox("setText", res.optId);
                 $("#score").textbox("setText", res.score);
                 $("#result").textbox("setText", res.result);
+                $("#optId").combobox({data: res.totOptClassList});
+                $("#optId").combobox("setValue", res.optId);
                 var cols = [];
                 var idx  = 0;
                 cols[idx] = {field: 'itemNo',   title: '編號',     width:  80}; idx++;
@@ -233,13 +236,13 @@ function qryItemList(index,row) {
                 idx = idx + res.opt[optClassKey].length;
                 
                 cols[idx] = {field: 'optId',   hidden: true}; idx++;
-                cols[idx] = {field: 'comm',     title: '註記',     width:  65,
+                cols[idx] = {field: 'comm',     title: '鍵盤輸入',     width:  65,
                                 formatter:function(value, row, index){
-                                    return '<button onclick="editComm()">編輯</button>';
+                                    return '<button onclick="editComm()">輸入</button>';
                                 }}; idx++;
-                cols[idx] = {field: 'pic',      title: '考官塗鴉', width:  65,
+                cols[idx] = {field: 'pic',      title: '手寫輸入', width:  65,
                                 formatter:function(value, row, index){
-                                    return '<button onclick="editPic()">編輯</button>';
+                                    return '<button onclick="editPic()">輸入</button>';
                                 }}; idx++;
                 
                 $("#itemList").datagrid({
@@ -277,6 +280,7 @@ function scoreEditDone() {
     req.sectSeq = $('#sectSeq').val();
     req.roomSeq = $('#roomSeq').val();
     req.qsId = $("#qsId").val();
+    req.optId = $("#optId").combobox('getValue');
     
     var rows = $('#itemList').datagrid('getRows');
     var itemList = [{}];
@@ -294,7 +298,7 @@ function scoreEditDone() {
     $.post("ScSetScore_scoreEditDone", req, function (res) {
         parent.showStatus(res);
         if (res.success) {
-        	$("#optId").textbox("setText", res.optId);
+        	//$("#optId").textbox("setText", res.optId);
             $("#score").textbox("setText", res.score);
             $("#result").textbox("setText", res.result);
         }
@@ -346,16 +350,16 @@ function backProgId(bProgId) {
                     <input type="hidden" id="examinee" value="${examinee}"/>
                     <input id="sectSeq" type="hidden" value="${sectSeq}"/>
                 </td>
-                <td style="width: 60px; text-align: right;">
-                    <button id="editModBut" type="button" style="width: 50px;" onclick="editComm();">註記</button>
+                <td style="width: 90px; text-align: right;">
+                    <button id="editModBut" type="button" style="width: 80px;" onclick="editComm();">鍵盤輸入</button>
                 </td>
                 <td style="width: 90px; text-align: right;">
-                    <button id="editModBut" type="button" style="width: 80px;" onclick="editPic();">考官塗鴉</button>
+                    <button id="editModBut" type="button" style="width: 80px;" onclick="editPic();">手寫輸入</button>
                 </td>
                 <!-- <td style="width: 300px;"></td> -->
                 <td style="width: 140px; text-align: right;">
 整體級數：
-                    <input id="optId" class="easyui-textbox" style="width: 50px;" value="${optId}"/>
+                    <input id="optId" class="easyui-combobox" style="width: 50px;" value="${optId}"/>
                 </td>
                 <td style="width: 110px; text-align: right;">
 得分：
@@ -425,6 +429,13 @@ function backProgId(bProgId) {
 <script type="text/javascript">
 parent.showProg({ id: $("#progId").val(), priv: $("#privDesc").val(), title: $("#progTitle").val() });
 parent.showStatus({ status: $("#status").val(), statusTime: $("#statusTime").val() });
+
+$("#optId").combobox({
+    editable: false,
+    panelHeight: 'auto',
+    valueField:'optId',
+    textField:'optDesc'
+})
 
 //qryRdList();
 </script>

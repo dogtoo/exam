@@ -247,7 +247,7 @@ public class ScRunDownAction {
         {
             List<Map<String, Object>> sectTypeList = CodeSvc.buildSelectDataByKind(dbu, "SCSECT", false);
             for (Map<String, Object> sectType : sectTypeList) {
-                if (!(sectType.get("value").equals("REA") || sectType.get("value").equals("EXA")))
+                if (!(sectType.get("value").equals("REA") || sectType.get("value").equals("EXA") || sectType.get("value").equals("FBT")))
                     res.add(sectType);                    
             }
         }
@@ -461,7 +461,9 @@ public class ScRunDownAction {
             sectTime  = (sect.isNull("sectTime")) ? 0 : sect.getInt("sectTime");
             fileName = (sect.isNull("fileName")) ? "" : sect.getString("fileName");
             relaTime  = (sect.isNull("relaTime")) ? 0 : sect.getInt("relaTime");
-            execTime = (sect.isNull("execTime")) ? "" : sect.getString("execTime");
+//執行時間是考試後壓的嗎?
+            //execTime = (sect.isNull("execTime")) ? "" : sect.getString("execTime");
+            execTime = "";
             cnt += dbu.executeList(instSect, rdId, seqNo, sectSeq, sectType, sectTime, fileName, relaTime, execTime);
         }
         
@@ -477,7 +479,8 @@ public class ScRunDownAction {
         String rdId = req.get("rdId");
         
         String sqlRdrm =
-                 "SELECT a.examinee \n"
+//                 "SELECT a.examinee \n"
+        		 "SELECT a.examinee, a.room_seq \"roomSeq\" \n"
                + "     , (select user_name from mbdetl where user_id = a.examinee) \"examineeName\" \n"
                + "  FROM scrddm a \n"
                + " WHERE rd_id = ? \n"
@@ -558,6 +561,7 @@ public class ScRunDownAction {
           + "      , substr(rd_date, 1, 4) || '/' || substr(rd_date, 5, 2) || '/' || substr(rd_date, 7, 2) \"rdDate\"\n"
           + "      , substr(beg_time, 1, 2) || ':' || substr(beg_time, 3, 2) \"begTime\"\n"
           + "      , qs_count \"qsCount\", read_time \"readTime\", exam_time \"examTime\"\n"
+          + "      , fb_time \"fbTime\", end_time \"endTime\"\n"
           + "      , sts_r \"stsR\", sts_s \"stsS\", sts_e \"stsE\"\n"
           + "   FROM scrdmm a\n"
           + "  WHERE 1=1\n"
@@ -587,7 +591,7 @@ public class ScRunDownAction {
         List<Map<String, Object>> rowRds;
         DbUtil dbu = new DbUtil();
         try
-        {            
+        {
             rowRds = qryRdList(req, dbu);
             if (rowRds.size() == 0)
                 throw new StopException("查無梯次資料");
@@ -640,6 +644,8 @@ public class ScRunDownAction {
                 int qsCount = Integer.parseInt(req.get("pQsCount"));
                 int readTime = Integer.parseInt(req.get("pReadTime"));
                 int examTime = Integer.parseInt(req.get("pExamTime"));
+                int fbTime = Integer.parseInt(req.get("pFbTime"));
+                int endTime = Integer.parseInt(req.get("pEndTime"));
                 String copyQs = req.get("copyQs");
                 String copyExaminer = req.get("copyExaminer");
                 String copyPatient = req.get("copyPatient");
@@ -682,9 +688,9 @@ public class ScRunDownAction {
                     newRdId = procRdId;
                     sqlUpRd =
                         "INSERT INTO scrdmm \n"
-                      + "    (rd_desc, rd_date, beg_time, qs_count, read_time, exam_time, rd_id)\n" 
+                      + "    (rd_desc, rd_date, beg_time, qs_count, read_time, exam_time, fb_time, end_time, rd_id)\n" 
                       + "VALUES \n"
-                      + "    (?, ?, ?, ?, ?, ?, ?);";
+                      + "    (?, ?, ?, ?, ?, ?, ?, ?, ?);";
                 }
                 else
                 {
@@ -696,9 +702,38 @@ public class ScRunDownAction {
                       + "     , qs_count=?\n"
                       + "     , read_time=?\n"
                       + "     , exam_time=?\n"
+                      + "     , fb_time=?\n"
+                      + "     , end_time=?\n"
                       + " WHERE rd_id = ?;";
                 }
-                dbu.executeList(sqlUpRd, rdDesc, rdDate, begTime, qsCount, readTime, examTime, procRdId);
+                dbu.executeList(sqlUpRd, rdDesc, rdDate, begTime, qsCount, readTime, examTime, fbTime, endTime, procRdId);
+                
+                // 如果後來又編輯時間，要把節次的時間連動改掉
+                String sqlCntRdsm = " SELECT count(1) FROM scrdsm WHERE rd_id = ?";
+    			Integer cnt = Integer.parseInt(dbu.selectStringList(sqlCntRdsm, procRdId));
+    			String sqlUpdRdsm = "";
+    			if (cnt != 0) {
+    				// REA:讀題時間
+    				sqlUpdRdsm = "UPDATE scrdsm\n"
+    						   + "   SET sect_time = ? \n"
+    						   + " WHERE rd_id     = ? \n"
+    						   + "   AND sect_type = 'REA' \n";
+    				dbu.executeList(sqlUpdRdsm, readTime, procRdId);
+    				
+    				// EXA:考試時間
+    				sqlUpdRdsm = "UPDATE scrdsm\n"
+    						   + "   SET sect_time = ? \n"
+    						   + " WHERE rd_id     = ? \n"
+    						   + "   AND sect_type = 'EXA' \n";
+    				dbu.executeList(sqlUpdRdsm, examTime, procRdId);
+    				
+    				// FBT:回饋時間
+    				sqlUpdRdsm = "UPDATE scrdsm\n"
+ 						       + "   SET sect_time = ? \n"
+ 						       + " WHERE rd_id     = ? \n"
+ 						       + "   AND sect_type = 'FBT' \n";
+    				dbu.executeList(sqlUpdRdsm, fbTime, procRdId);
+    			}
             }
             else if (editType.equals("D")) {
                 if (rdId == null || rdId.length() == 0)
@@ -870,7 +905,7 @@ public class ScRunDownAction {
         
         DbUtil dbu = new DbUtil();
         try
-        {            
+        {
             String rdId = req.get("rdId");
             rowSects = qrySectList(req, dbu);
             if (rowSects.size() == 0) {
@@ -879,7 +914,8 @@ public class ScRunDownAction {
                 int qs_count = (Integer) rowRd.get(0).get("qsCount");
                 int readTime = (Integer) rowRd.get(0).get("readTime");
                 int examTime = (Integer) rowRd.get(0).get("examTime");
-                String[] noShowType = {"REA","EXA"};
+                int fbTime   = (Integer) rowRd.get(0).get("fbTime");
+                String[] noShowType = {"REA","EXA","FBT"};
                 
                 for (int i=1; i<=qs_count; i++) {
                     int y = 1;
@@ -894,6 +930,8 @@ public class ScRunDownAction {
                             sect.put("sectTime", readTime);
                         if (sectType.equals("EXA"))
                             sect.put("sectTime", examTime);
+                        if (sectType.equals("FBT"))
+                            sect.put("sectTime", fbTime);
                         rowSects.add(sect);
                         y--;
                     }

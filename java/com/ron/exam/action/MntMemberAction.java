@@ -20,6 +20,7 @@ import com.ron.exam.util.StopException;
 import com.ron.exam.util.DbUtil;
 import com.ron.exam.util.ExceptionUtil;
 import com.ron.exam.util.OperLog;
+import com.ron.exam.service.CodeSvc;
 import com.ron.exam.service.MiscTool;
 import com.ron.exam.service.ParamSvc;
 import com.ron.exam.service.ProgData;
@@ -303,6 +304,7 @@ public class MntMemberAction {
 			res.put("success", false);
 			
 			res.put("departList", ParamSvc.buildSelectDataByClass(dbu, "DEPART", false));
+			res.put("mbTypeList", CodeSvc.buildSelectDataByKind(dbu, "MBTYPE", false));
 			
 			String sqlQryMenu =
 				  " SELECT menu_id \"value\", menu_desc \"text\"\n"
