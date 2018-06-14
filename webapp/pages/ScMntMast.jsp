@@ -91,7 +91,8 @@ function qryQsList(pageNumber, pageSize) {
                     "    <input name='borderline'    type='text' style='width: " + widthList[wat++] + "px;' readonly value='" + qs.borderline    + "' />\n" +
                     "</td>\n" +
                     "<td>\n" +
-                    "    <input name='fract'         type='text' style='width: " + widthList[wat++] + "px;' readonly value='" + ((qs.fract!="")? fractText[qs.fract] : "") + "' />\n" +
+                    "    <input name='fractText'     type='text' style='width: " + widthList[wat++] + "px;' readonly value='" + ((qs.fract!="")? fractText[qs.fract] : "") + "' />\n" +
+                    "    <input name='fract'         type='hidden' value='" + qs.fract + "' />\n" +
                     "</td>\n" +
                     "<td>\n" +
                     "    <input name='crStd'         type='text' style='width: " + widthList[wat++] + "px;' readonly value='" + qs.crStd         + "' />\n" +

@@ -1,12 +1,14 @@
 package com.ron.exam.action;
 
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Date;
 
 import javax.servlet.http.HttpSession;
 
@@ -250,10 +252,20 @@ public class ScRunDownAction {
         DbUtil dbu = new DbUtil();
         try
         {
-            List<Map<String, Object>> sectTypeList = CodeSvc.buildSelectDataByKind(dbu, "SCSECT", false);
+            Date sysDate = new Date();
+            SimpleDateFormat formatter = new SimpleDateFormat("yyyy/MM/dd");
+            Date rdDate = null;
+            rdDate = formatter.parse(req.get("rdDate"));
+
+        	List<Map<String, Object>> sectTypeList = CodeSvc.buildSelectDataByKind(dbu, "SCSECT", false);
             for (Map<String, Object> sectType : sectTypeList) {
-                if (!(sectType.get("value").equals("REA") || sectType.get("value").equals("EXA") || sectType.get("value").equals("FBT")))
-                    res.add(sectType);                    
+//                if (!(sectType.get("value").equals("REA") || sectType.get("value").equals("EXA") || sectType.get("value").equals("FBT") ||
+//                	  sectType.get("value").equals("BET") || sectType.get("value").equals("ENT") || sectType.get("value").equals("MED") ))
+//                	res.add(sectType);
+            	if(sectType.get("value").equals("RES") && sysDate.before(rdDate))
+                	res.add(sectType);
+            	if(sectType.get("value").equals("SUS") && sysDate.after(rdDate))
+            		res.add(sectType);
             }
         }
         catch (SQLException e) {
@@ -272,12 +284,11 @@ public class ScRunDownAction {
         List<Map<String, Object>> rowRdrms = new ArrayList<Map<String, Object>>();
         
         String rdId = req.get("rdId");
-        int roomSeq = 0;
+        int roomSeq = (req.get("roomSeq")!=null) ? Integer.parseInt(req.get("roomSeq")) : 0;
         int sectSeq = 0;
         String qryType = "";
         
         if (req.get("qryType") != null && req.get("qryType").equals("SCRDDM")) {
-            roomSeq = Integer.parseInt(req.get("roomSeq"));
             sectSeq = Integer.parseInt(req.get("sectSeq"));
             qryType = req.get("qryType");
         }
@@ -568,6 +579,7 @@ public class ScRunDownAction {
           + "      , qs_count \"qsCount\", read_time \"readTime\", exam_time \"examTime\"\n"
           + "      , fb_time \"fbTime\", end_time \"endTime\"\n"
           + "      , sts_r \"stsR\", sts_s \"stsS\", sts_e \"stsE\"\n"
+          + "      , count(*) OVER() AS total \n"
           + "   FROM scrdmm a\n"
           + "  WHERE 1=1\n"
           + "    AND (coalesce(?, '') = '' OR rd_id = ?)\n"
@@ -577,7 +589,7 @@ public class ScRunDownAction {
           + "  ORDER BY rd_id\n"
           + "  LIMIT ? OFFSET ? \n";
         rowRds = dbu.selectMapAllList(sqlQryRd, rdId, rdId, rdDesc, rdDesc, rdDateS, rdDateS, rdDateE, rdDateE, rows, ((page-1) * rows));
-        System.out.println("qryRdList : rdId = " + rdId + " size = " + rowRds.size());
+        //System.out.println("qryRdList : rdId = " + rdId + " size = " + rowRds.size());
         return rowRds;
     }
     
@@ -943,8 +955,12 @@ public class ScRunDownAction {
                     
                 }
             }
-                
             res.put("sectList", rowSects);
+            
+            Map<String, String> qryReq = new HashMap<String, String>();
+            qryReq.put("rdDate", req.get("rdDate"));
+            List<Map<String, Object>> qryRes = qrySectTypeList(qryReq);
+            res.put("sectType", qryRes);
             
             res.put("success", true);
             res.put("status", "查詢考站資料完成");

@@ -156,7 +156,10 @@ function qryRdList() {
                 success: function(res){
                     parent.showStatus(res);
                     if (res.success){
-                        success(res.rdmmList);             
+                        success({
+                            total: res.rdmmList[0].total,
+                            rows: res.rdmmList
+                        });
                     } else {
                         error([]);
                     }
@@ -718,10 +721,6 @@ function reLoadRdSectSeq() {
         var row = rows[i];
         var sectSeq = 0;
 
-        //倒數時間最後處理
-    	if (row.sectType == 'BET' || row.sectType == 'ENT' || row.sectType == 'MED')
-    		continue;
-
         if (row.sectType == 'REA' || row.sectType == 'EXA' || row.sectType == 'FBT') {
             if (row.sectType == 'REA')
                 sectRdIdx++;
@@ -736,14 +735,21 @@ function reLoadRdSectSeq() {
             row: {
                 seqNo: i+1,
                 sectSeq: sectSeq,
-                execTime: addZero(nowExec.getHours()) + ":" + addZero(nowExec.getMinutes()) + ":" + addZero(nowExec.getSeconds())
+                execTime: addZero(nowExec.getHours()) + ":" + addZero(nowExec.getMinutes())
             }
         });
     }
+    
+    // 結束評分時間
+    var endTime = new Date(0,0,0,0,$("#hEndTime").val());
+    fSectTime = new Date(0,0,0,0,rows[rows.length-1].sectTime);
+    nowExec.setMinutes(nowExec.getMinutes() + fSectTime.getMinutes() + endTime.getMinutes());
+    $("#edEndTime").textbox('setValue', addZero(nowExec.getHours()) + ":" + addZero(nowExec.getMinutes()));
 }
 
 //選擇節次類別時設定可輸入欄
 function rdSectInputField(sectType) {
+	sectType = sectType.value;
     //$("#btRdSectEdit").attr('disabled', 'disabled');
     $("#edSectType").textbox('setText' ,'');
     $("#edSectTime").numberbox('setValue',0);
@@ -797,7 +803,7 @@ function rdSectInputField(sectType) {
 function rdSectEditRow() {
     
 	var row = $('#rdSect').datagrid('getSelected');
-    if (row){
+    /*if (row){
     	if (row.sectType == 'REA' || row.sectType == 'EXA' || row.sectType == 'FBT') {
     		alert('不可異動讀題、考試、回饋時間!');
     		return;
@@ -813,9 +819,16 @@ function rdSectEditRow() {
                 relaTime: $("#edRelaTime").numberbox('getValue')
             }
         });
-    } else {
+    } else {*/
+    	if ($("#edSectType").combobox('getText') == null || $("#edSectType").combobox('getText').length == 0) {
+    		alert('必須選擇時間類別!');
+    		return;
+    	}
+    	var index = 0;
+    	index = $('#rdSect').datagrid('getRowIndex', row);
     	$('#rdSect').datagrid('insertRow', {
-            row:{
+    		index: index + 1,
+    		row:{
                 sectName: $("#edSectType").combobox('getText'),
                 sectType: $("#edSectType").combobox('getValue'),
                 sectTime: $("#edSectTime").numberbox('getValue'),
@@ -823,9 +836,8 @@ function rdSectEditRow() {
                 relaTime: $("#edRelaTime").numberbox('getValue')
             }
         });
-    }
-    
-    $('#rdSect').datagrid('enableDnd');
+    //}
+
     reLoadRdSectSeq();
 }
 
@@ -901,7 +913,7 @@ function editRdSect(target) {
 	// 把row的值帶進來
 	var row = $("#rdmmList").datagrid('getRows')[getRowIndex(target)];
     $("#edBegTime").textbox('setValue', row.begTime);
-    $("#edEndTime").textbox('setValue', row.endTime);
+    $("#hEndTime").val(row.endTime);
     
     // 產生執行時間
     execTime = new Date(row.rdDate);
@@ -943,38 +955,36 @@ function editRdSect(target) {
             $("#edSectTime").textbox('setValue','');
             $("#edFileName").textbox('setText' ,'');
             $("#edRelaTime").textbox('setValue','');
-            $(this).datagrid('enableDnd');
             reLoadRdSectSeq();
         },
-        onClickRow:function(index, row){
+        /*onClickRow:function(index, row){
             rdSectInputField(row.sectType);
             $("#edSectType").textbox('setText',row.sectName);
             $("#edSectTime").textbox('setValue',row.sectTime);
             $("#edFileName").textbox('setText',row.fileName);
             $("#edRelaTime").textbox('setValue',row.relaTime);
             $("#btRdSectUpd").html("&nbsp;更新&nbsp;");
-        },
-        onStopDrag: function(){
+        },*/
+        /*onStopDrag: function(){
         	reLoadRdSectSeq();
-        },
+        },*/
     });
     
     $.ajax({
         url: 'ScRunDown_qrySect',
         type: 'POST',
-        data: {'rdId': row.rdId},
+        data: {'rdId': row.rdId, 'rdDate': row.rdDate},
         dataType: 'json',
         success: function(res) {
             parent.showStatus(res);
             if (res.success) {
 	            $('#rdSect').datagrid('loadData',res.sectList);
+	            $('#edSectType').combobox('loadData',res.sectType);
+	            $("#edSectType").textbox('setText' ,'');
 	            
 	            //回饋時間如果0就不顯示
 	            for (var i=0; i<res.sectList.length; i++) {
 	            	if (res.sectList[i].sectType == 'FBT' && res.sectList[i].sectTime == '0') {
-	            		//alert($("#rdSect").datagrid('getColumnOption','sectTime'));
-	            		//res.sectList[i].hide();
-	            		alert($("#rdSect").datagrid('validateRow',i));
 	            	}
 	            }
         	} else
@@ -982,7 +992,7 @@ function editRdSect(target) {
         }
     });
     
-    $("#edSectType").combobox({
+    /*$("#edSectType").combobox({
         valueField:'value',
         textField:'text',
         url: 'ScRunDown_qrySectTypeList',
@@ -990,7 +1000,7 @@ function editRdSect(target) {
         onSelect: function(rec) {
             rdSectInputField(rec.value);
         }
-    })
+    })*/
 }
 
 //節次執行時間若為個位數補0 e.g. 9:5 -> 09:05
@@ -1011,7 +1021,7 @@ function rdSectClean() {
     $("#edSectTime").textbox({'readonly':true});
     $("#edFileName").textbox({'readonly':true});
     $("#edRelaTime").textbox({'readonly':true});
-    $("#btRdSectUpd").html("&nbsp;插入&nbsp;");
+    //$("#btRdSectUpd").html("&nbsp;插入&nbsp;");
     $('#rdSect').datagrid('clearSelections');
 }
 //考試節次END
@@ -1359,7 +1369,7 @@ function editRdExaminee(target) {
                             <td>結束評分時間</td>
                         </tr>
                         <tr>
-                            <td><input id="edSectType" class="easyui-combobox" style="width: 80px;"/></td>
+                            <td><input id="edSectType" class="easyui-combobox" style="width: 80px;" data-options="onSelect:rdSectInputField"/></td>
                             <td><input id="edSectTime" class="easyui-numberbox" style="width: 55px;"/></td>
                             <td><input id="edFileName" class="easyui-textbox" style="width: 150px;"/></td>
                             <td><input id="edRelaTime" class="easyui-numberbox" style="width: 55px;"/></td>
@@ -1368,6 +1378,7 @@ function editRdExaminee(target) {
                             <td></td>
                             <td><input id="edBegTime" class="easyui-numberbox" style="width: 70px;" data-options="readonly: true"/></td>
                             <td><input id="edEndTime" class="easyui-numberbox" style="width: 70px;" data-options="readonly: true"/></td>
+                            <td><input id="hEndTime" type="hidden" /></td>
                         </tr>
                     </table>
                 </td>
