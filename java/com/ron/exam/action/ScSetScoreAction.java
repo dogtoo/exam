@@ -1,5 +1,8 @@
 package com.ron.exam.action;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -7,8 +10,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import javax.imageio.ImageIO;
+import javax.naming.Context;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
 import javax.servlet.http.HttpSession;
 
+import org.apache.commons.codec.binary.Base64;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
@@ -22,13 +31,7 @@ import com.ron.exam.util.StdCalendar;
 import com.ron.exam.util.StopException;
 import com.ron.exam.util.DbUtil;
 import com.ron.exam.util.ExceptionUtil;
-import com.ron.exam.util.OperLog;
-import com.ron.exam.service.CodeSvc;
-import com.ron.exam.service.MemberSvc;
-import com.ron.exam.service.MiscTool;
-import com.ron.exam.service.ParamSvc;
 import com.ron.exam.service.ProgData;
-import com.ron.exam.service.QsSvc;
 import com.ron.exam.service.UserData;
 
 @EnableWebMvc
@@ -571,6 +574,53 @@ public class ScSetScoreAction {
         }
         dbu.relDbConn();
         
+        return res;
+    }
+    
+    /**
+     * 儲存手寫輸入
+     * @param req
+     * @return
+     */
+    @RequestMapping(value = "/ScSetScore_editPicDone", method = RequestMethod.POST)
+    public @ResponseBody Map<String, Object> editPicDone(@RequestParam Map<String, String> req) {
+        Map<String, Object> res = new HashMap<String, Object>();
+        res.put("status", "");
+        res.put("statusTime", new StdCalendar().toTimesString());
+
+        DbUtil dbu = new DbUtil();
+        try {
+            res.put("success", false);
+            
+            // write the image to a file
+            String uploadPath;
+            try {
+                Context initCtx = new InitialContext();
+                uploadPath = (String) initCtx.lookup("java:/comp/env/conf/uploadImage_path");    
+            }
+            catch (NamingException e) {
+                throw new StopException("無法取得上傳路徑: " + e.toString());
+            }
+            String rdId = req.get("rdId");
+            String qsId = req.get("qsId");
+            String sectSeq = req.get("sectSeq");
+            String itemNo = req.get("itemNo");
+            String fileName = rdId + "_" + qsId + "_" + sectSeq + "_" + itemNo;
+            File outputfile = new File(uploadPath + fileName + ".png");
+            @SuppressWarnings("restriction")
+            byte[] imageBytes= javax.xml.bind.DatatypeConverter.parseBase64Binary(req.get("image"));
+            BufferedImage image = ImageIO.read(new ByteArrayInputStream(imageBytes));
+            ImageIO.write(image, "png", outputfile);
+
+        }
+        catch (StopException e) {
+            res.put("status", e.getMessage());
+        }
+        catch (Exception e) {
+            res.put("status", ExceptionUtil.procExceptionMsg(e));
+        }
+        dbu.relDbConn();
+            
         return res;
     }
 }

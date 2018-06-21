@@ -20,9 +20,13 @@
     <Environment name="conf/operationLog_path"
         value="C:\work\RON\operLog"
         type="java.lang.String" override="false"/>
+        
+    <Environment name="conf/uploadImage_path"
+        value="C:\work\RON\workspace\exam\src\main\webapp\images\"
+        type="java.lang.String" override="false"/>
 
     <Environment name="conf/upload_path"
-        value="/home/bernie/ron/uploadZone/"
+        value="C:\work\RON\uploadZone\"
         type="java.lang.String" override="false"/>
 
     <Environment name="conf/question_template_file_path"
