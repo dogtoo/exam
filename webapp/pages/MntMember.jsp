@@ -72,6 +72,7 @@ function clearAll() {
 	$("#qryUserName").textbox("setValue", "");
 	$("#qryDepartId").combobox("setValue", "");
 	$("#qryUserNo").textbox("setValue", "");
+	$("#qryMbType").textbox("setValue", "");
 	$("#qryMobileNo").textbox("setValue", "");
 	$("#qryAddress").textbox("setValue", "");
 	$("#qryEmail").textbox("setValue", "");
@@ -95,6 +96,7 @@ function qryMemberList(mode) {
 		queryCond1.userName = $("#qryUserName").textbox("getValue");
 		queryCond1.departId = $("#qryDepartId").combobox("getValue");
 		queryCond1.userNo = $("#qryUserNo").textbox("getValue");
+		queryCond1.mbType = $("#qryMbType").textbox("getValue");
 		queryCond1.mobileNo = $("#qryMobileNo").textbox("getValue");
 		queryCond1.address = $("#qryAddress").textbox("getValue");
 		queryCond1.email = $("#qryEmail").textbox("getValue");
@@ -137,6 +139,9 @@ function qryMemberList(mode) {
 					"</td>\n" +
 					"<td>\n" +
 					"    <input name='userNo' type='text' style='width: 100px;' readonly value='" + user.userNo + "' />\n" +
+					"</td>\n" +
+					"<td>\n" +
+					"    <input name='mbType' type='text' style='width: 60px;' readonly value='" + user.mbType + "' />\n" +
 					"</td>\n" +
 					"<td>\n" +
 					"    <input name='mobileNo' type='text' style='width: 100px;' readonly value='" + user.mobileNo + "' />\n" +
@@ -197,14 +202,14 @@ function addMember() {
 			$("#editMenuId").combobox("setValue", "");
 			$("#editRemark").textbox("setValue", "");
 			$("#roleList").datagrid("uncheckAll");
-			$("#mbType").combobox({
+			$("#editMbType").combobox({
 			    editable: false, 
 			    panelHeight: 'auto',
 			    valueField:'value',
 			    textField:'text',
 			    data: res.mbTypeList
 			});
-			$("#mbType").combobox("setValue","");
+			$("#editMbType").combobox("setValue","");
 		}
 	}, "json");
 }
@@ -239,14 +244,14 @@ function modMember(src) {
 			$("#editInitPass").textbox("setValue", res.initPass);
 			$("#editRemark").textbox("setValue", res.remark);
 			
-			$("#mbType").combobox({
+			$("#editMbType").combobox({
 			    editable: false, 
 			    panelHeight: 'auto',
 			    valueField:'value',
 			    textField:'text',
 			    data: res.mbTypeList
 			});
-			$("#mbType").combobox("setValue",res.mbType);
+			$("#editMbType").combobox("setValue",res.mbType);
 			
 			var jroleList = $("#roleList");
 			jroleList.datagrid("uncheckAll");
@@ -278,7 +283,7 @@ function memberEditDone() {
 	req.alterUser = $("#alterUser").switchbutton("options").checked ? "Y" : "N";
 	req.menuId = $("#editMenuId").textbox("getValue");
 	req.initPass = $("#editInitPass").textbox("getValue");
-	req.mbType = $("#mbType").combobox("getValue");
+	req.mbType = $("#editMbType").combobox("getValue");
 	if ($("#memberEditMode").val() == "A") {
 		$.post("MntMember_addMember", req, function (res) {
 			parent.showStatus(res);
@@ -343,6 +348,7 @@ function delMember(src) {
 			<td>姓名</td>
 			<td>科系</td>
 			<td>編號</td>
+			<td>類別</td>
 			<td>手機號碼</td>
 			<td>通訊地址</td>
 			<td>電子郵件</td>
@@ -369,6 +375,11 @@ function delMember(src) {
 			</td>
 			<td>
 				<input id="qryUserNo" class="easyui-textbox" style="width: 100px;" />
+			</td>
+			<td>
+				<select id="qryMbType" class="easyui-combobox"  style="width:60px;" data-options="editable: false, panelHeight: 'auto'" >
+					${mbTypeList}
+				</select>
 			</td>
 			<td>
 				<input id="qryMobileNo" class="easyui-textbox" style="width: 100px;" />
@@ -441,9 +452,10 @@ function delMember(src) {
 					<span class="orderMark" order="departId">&nbsp;</span>
 				</td>
 				<td style="width: 100px;" class="headCol4">編號</td>
-				<td style="width: 100px;" class="headCol5">手機號碼</td>
-				<td style="width: 150px;" class="headCol6">通訊地址</td>
-				<td style="width: 200px;" class="headCol7">電子郵件</td>
+				<td style="width: 60px;" class="headCol5">類別</td>
+				<td style="width: 100px;" class="headCol6">手機號碼</td>
+				<td style="width: 150px;" class="headCol7">通訊地址</td>
+				<td style="width: 200px;" class="headCol3">電子郵件</td>
 				<td style="width: 90px;" class="headCol6">
 					<span class="orderField" onclick="chgOrder(this);">生效日期</span>
 					<span class="orderMark" order="beginDate">&nbsp;</span>

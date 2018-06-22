@@ -97,6 +97,7 @@ public class MntMemberAction {
 			res.put("queryHide", ProgData.c_privBaseQuery.equals(ud.getPrivBase(c_progId)) ? "visibility: hidden;" : "");
 
 			res.put("departList", ParamSvc.buildSelectOptionByClass(dbu, ParamSvc.c_clsDepart, true));
+			res.put("mbTypeList", CodeSvc.buildSelectOptionByKind(dbu, "MBTYPE", true));
 		}
 //		catch (StopException e) {
 //			res.put("status", e.getMessage());
@@ -147,7 +148,7 @@ public class MntMemberAction {
 				pageAt = 0;
 			
 			StringBuffer sqlQryUser = new StringBuffer(
-				  " SELECT user_id, user_name, depart_id, user_no, mobile_no, address, email, begin_date, end_date\n");
+				  " SELECT user_id, user_name, depart_id, user_no, mobile_no, address, email, begin_date, end_date, mb_type\n");
 			StringBuffer sqlCntUser = new StringBuffer(" SELECT COUNT(*)");
 			StringBuffer sqlCond = new StringBuffer(
 				  "   FROM mbdetl a\n"
@@ -169,10 +170,15 @@ public class MntMemberAction {
 				params.add(qryDepartId);
 			}
 			String qryUserNo = req.get("userNo");
-			if (!qryUserNo.isEmpty()) {
-				sqlCond.append(" AND user_no LIKE '%' || ? || '%'\n");
-				params.add(qryUserNo);
-			}
+            if (!qryUserNo.isEmpty()) {
+                sqlCond.append(" AND user_no LIKE '%' || ? || '%'\n");
+                params.add(qryUserNo);
+            }
+            String qryMbType = req.get("mbType");
+            if (!qryMbType.isEmpty()) {
+                sqlCond.append(" AND mb_Type = ? \n");
+                params.add(qryMbType);
+            }
 			String qryMobileNo = req.get("mobileNo");
 			if (!qryMobileNo.isEmpty()) {
 				sqlCond.append(" AND mobile_no LIKE '%' || ? || '%'\n");
@@ -256,6 +262,8 @@ public class MntMemberAction {
 				params.add(pageAt * pageRow);
 				params.add(pageRow);
 			}
+			
+			Map<String, String> mbCode = CodeSvc.buildStringMapByKind(dbu, "MBTYPE");
 
 			Map<String, String> departMap = ParamSvc.buildStringMapByClass(dbu, "DEPART");
 			ResultSet rsUser = dbu.queryArray(sqlQryUser.toString(), params.toArray());
@@ -266,6 +274,7 @@ public class MntMemberAction {
 				user.put("userName", rsUser.getString("user_name"));
 				user.put("departName", departMap.get(rsUser.getString("depart_id")));
 				user.put("userNo", DbUtil.nullToEmpty(rsUser.getString("user_no")));
+				user.put("mbType", (rsUser.getString("mb_type") != null && !rsUser.getString("mb_type").equals("")? mbCode.get(rsUser.getString("mb_type")) : "" ));
 				user.put("mobileNo", DbUtil.nullToEmpty(rsUser.getString("mobile_no")));
 				user.put("address", DbUtil.nullToEmpty(rsUser.getString("address")));
 				user.put("email", DbUtil.nullToEmpty(rsUser.getString("email")));
