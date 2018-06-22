@@ -3,6 +3,7 @@ package com.ron.exam.action;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,7 +18,6 @@ import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.servlet.http.HttpSession;
 
-import org.apache.commons.codec.binary.Base64;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
@@ -31,6 +31,7 @@ import com.ron.exam.util.StdCalendar;
 import com.ron.exam.util.StopException;
 import com.ron.exam.util.DbUtil;
 import com.ron.exam.util.ExceptionUtil;
+import com.ron.exam.service.CodeSvc;
 import com.ron.exam.service.ProgData;
 import com.ron.exam.service.UserData;
 
@@ -153,7 +154,9 @@ public class ScSetScoreAction {
             }  
             
             // 考試結果清單
-            //res.put("resList", CodeSvc.buildSelectDataByKind(dbu, "SCRESU", false)); 
+            JSONObject resListJ = new JSONObject();
+            resListJ.put("resList", CodeSvc.buildSelectDataByKind(dbu, "SCRESU", false));
+            res.put("resList", resListJ.toString().replaceAll("\"", "'")); 
         }
         catch (StopException e) {
             res.put("status", e.getMessage());
@@ -288,11 +291,11 @@ public class ScSetScoreAction {
                 ex.put("fExaminee", rsEx.getString("examinee"));
                 ex.put("fExamineeName", rsEx.getString("examineeName"));
                 ex.put("fRoomSeq",  rsEx.getString("room_seq"));
-                ex.put("score",  rsEx.getString("score"));
-                ex.put("result",  rsEx.getString("result"));
-                ex.put("optId",  rsEx.getString("opt_id"));
-                ex.put("examComm",  rsEx.getString("exam_comm"));
-                ex.put("examPic",  rsEx.getString("exam_pic"));
+                ex.put("fscore",  rsEx.getString("score"));
+                ex.put("fresult",  rsEx.getString("result"));
+                ex.put("foptId",  rsEx.getString("opt_id"));
+                ex.put("fexamComm",  rsEx.getString("exam_comm"));
+                ex.put("fexamPic",  rsEx.getString("exam_pic"));
                 exList.add(ex);
             }
             rsEx.close();
@@ -365,6 +368,8 @@ public class ScSetScoreAction {
             //itemList.get(i).put("optId", rsScore.getString("opt_id"));
             //i++;
             itemMap.get(rsScore.getString("item_no")).put("optId", rsScore.getString("opt_id"));
+            itemMap.get(rsScore.getString("item_no")).put("examComm", rsScore.getString("exam_comm"));
+            itemMap.get(rsScore.getString("item_no")).put("examPic", rsScore.getString("exam_pic"));
         }
         
         for (String itemNo : itemArray) {
@@ -506,9 +511,9 @@ public class ScSetScoreAction {
                   + "   AND room_seq = ? \n";
             String sqlInsSco = 
                     "INSERT INTO scscom "
-                  + "(rd_id, room_seq, sect_seq, item_no, opt_class, opt_id, exam_comm, exam_pic) "
+                  + "(rd_id, room_seq, sect_seq, item_no, opt_class, opt_id, exam_comm) "
                   + "VALUES "
-                  + "(?, ?, ?, ?, ?, ?, ?, ?);";
+                  + "(?, ?, ?, ?, ?, ?, ?);";
             
             String sqlQryOpt = 
                     "SELECT score \n"
@@ -545,8 +550,7 @@ public class ScSetScoreAction {
                 score += dbu.selectIntList(sqlQryOpt, optClass, optId);
                 
                 String examComm = sco.getString("examComm");
-                String examPic = sco.getString("examPic");
-                dbu.executeList(sqlInsSco, rdId, roomSeq, sectSeq, itemNo, optClass, optId, examComm, examPic);
+                dbu.executeList(sqlInsSco, rdId, roomSeq, sectSeq, itemNo, optClass, optId, examComm);
             }
             if (score <= totalScore && score >= passScore)
                 result = "PAS";
@@ -603,15 +607,28 @@ public class ScSetScoreAction {
             }
             String rdId = req.get("rdId");
             String qsId = req.get("qsId");
-            String sectSeq = req.get("sectSeq");
-            String itemNo = req.get("itemNo");
+            int roomSeq = Integer.parseInt(req.get("roomSeq")+"");
+            int sectSeq = Integer.parseInt(req.get("sectSeq")+"");
+            int itemNo = Integer.parseInt(req.get("itemNo")+"");
             String fileName = rdId + "_" + qsId + "_" + sectSeq + "_" + itemNo;
             File outputfile = new File(uploadPath + fileName + ".png");
             @SuppressWarnings("restriction")
             byte[] imageBytes= javax.xml.bind.DatatypeConverter.parseBase64Binary(req.get("image"));
             BufferedImage image = ImageIO.read(new ByteArrayInputStream(imageBytes));
             ImageIO.write(image, "png", outputfile);
-
+            
+            String sqlUpExamPic =
+                    " UPDATE scscom  \n"
+                  + "    SET exam_pic = ? \n"
+                  + "  WHERE rd_id    = ? \n"
+                  + "    AND room_seq = ? \n"
+                  + "    AND sect_seq = ? \n"
+                  + "    AND item_no = ? \n";
+            dbu.executeList(sqlUpExamPic, fileName + ".png", rdId, roomSeq, sectSeq, itemNo);
+            dbu.doCommit();
+            res.put("examPic", fileName + ".png");
+            res.put("status", "圖檔儲存完成");
+            res.put("success", true);
         }
         catch (StopException e) {
             res.put("status", e.getMessage());
@@ -623,4 +640,51 @@ public class ScSetScoreAction {
             
         return res;
     }
+    
+    /**
+     * 讀取手寫輸入圖檔
+     * @param req
+     * @return
+     */
+    @SuppressWarnings({ "resource", "restriction" })
+    @RequestMapping(value = "/ScSetScore_getPic", method = RequestMethod.POST)
+    public @ResponseBody Map<String, Object> getPic(@RequestParam Map<String, String> req) {
+        Map<String, Object> res = new HashMap<String, Object>();
+        res.put("status", "");
+        res.put("statusTime", new StdCalendar().toTimesString());
+
+        DbUtil dbu = new DbUtil();
+        try {
+            res.put("success", false);
+            
+            // write the image to a file
+            String uploadPath;
+            try {
+                Context initCtx = new InitialContext();
+                uploadPath = (String) initCtx.lookup("java:/comp/env/conf/uploadImage_path");    
+            }
+            catch (NamingException e) {
+                throw new StopException("無法取得上傳路徑: " + e.toString());
+            }
+            
+            String examPic = req.get("examPic");
+            File outputfile = new File(uploadPath + examPic);
+            FileInputStream fileInputStream = null;
+            byte[] bytesArray = null;
+            bytesArray = new byte[(int) outputfile.length()];
+            fileInputStream = new FileInputStream(outputfile);
+            fileInputStream.read(bytesArray);
+            String imageBase64 = javax.xml.bind.DatatypeConverter.printBase64Binary(bytesArray);
+            res.put("imageBase64", imageBase64);
+            res.put("status", "圖檔讀取成功");
+            res.put("success", true);
+        }
+        catch (Exception e) {
+            res.put("status", ExceptionUtil.procExceptionMsg(e));
+        }
+        dbu.relDbConn();
+            
+        return res;
+    }
+        
 }

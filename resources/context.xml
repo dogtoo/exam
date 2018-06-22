@@ -22,7 +22,7 @@
         type="java.lang.String" override="false"/>
         
     <Environment name="conf/uploadImage_path"
-        value="C:\work\RON\workspace\exam\src\main\webapp\images\"
+        value="C:\work\RON\uploadImages\"
         type="java.lang.String" override="false"/>
 
     <Environment name="conf/upload_path"

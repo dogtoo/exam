@@ -143,9 +143,9 @@ $(function(){
                             $("#examineeText").combogrid('setValue',fRdId);
                             $("#sectSeq").val(res.exList[0]['fSectSeq']);
                             
-                            $("#optId").textbox('setText',res.exList[0]['optId']);
-                            $("#score").textbox('setText',res.exList[0]['score']);
-                            $("#result").textbox('setText',res.exList[0]['result']);
+                            $("#optId").textbox('setText',res.exList[0]['foptId']);
+                            $("#score").textbox('setText',res.exList[0]['fscore']);
+                            $("#result").textbox('setText',res.exList[0]['fresult']);
                             qryItemList();
                         }
                     }
@@ -161,16 +161,22 @@ $(function(){
             {field:'fExamineeName', title:'考生', width: 100},
             {field:'fRoomSeq',  title:'站別', width:  40},
             {field:'fTime',     title:'時間', width:  60},
-            {field:'score', hidden:true},
-            {field:'result', hidden:true},
-            {field:'optId', hidden:true},
-            {field:'examComm', hidden:true},
-            {field:'examPic', hidden:true},
+            {field:'fscore', hidden:true},
+            {field:'fresult', hidden:true},
+            {field:'foptId', hidden:true},
+            {field:'fexamComm', hidden:true},
+            {field:'fexamPic', hidden:true},
         ]]
     });
 
     
 });
+
+//點選datagrid時取得row的index
+function getRowIndex(target){
+    var tr = $(target).closest('tr.datagrid-row');
+    return parseInt(tr.attr('datagrid-row-index'));
+}
 
 /*
  * 查詢項次。
@@ -237,15 +243,18 @@ function qryItemList(index,row) {
                 idx = idx + res.opt[optClassKey].length;
                 
                 cols[idx] = {field: 'optId',   hidden: true}; idx++;
-                cols[idx] = {field: 'comm',     title: '鍵盤輸入',     width:  65,
+                cols[idx] = {field: 'examComm',     title: '鍵盤輸入',     width:  65,
                                 formatter:function(value, row, index){
-                                    return '<button onclick="editComm()">輸入</button>';
+                                    return '<button onclick=editComm("'+value+'")>輸入</button>';
                                 }}; idx++;
-                cols[idx] = {field: 'pic',      title: '手寫輸入', width:  65,
+                cols[idx] = {field: 'examPic',      title: '手寫輸入', width:  65,
                                 formatter:function(value, row, index){
-                                    return '<button onclick=editPic("'+row.optClass+'","'+row.itemNo+'","'+row.itemDesc+'","'+row.picUrl+'")>輸入</button>';
+                                    //"'+row.optClass+'","'+row.itemNo+'","'+row.itemDesc+'","'+row.picUrl+'"
+                                    //var rowJsonString = JSON.stringify(row);
+                                    return '<button onclick=editPic(this)>輸入</button>';
                                 }}; idx++;
-                cols[idx] = {field: 'picUrl', hidden: true}; idx++;
+                //cols[idx] = {field: 'examPic', hidden: true}; idx++;
+                //cols[idx] = {field: 'examPic', hidden: true}; idx++;
                 
                 $("#itemList").datagrid({
                     width:  '100%',
@@ -266,118 +275,29 @@ function editComm() {
     $("#edComm").dialog("open");
 }
 
-function editPic(optClass, itemNo, itemValue, url) {
-    $("#edPic").dialog("open");
-    
-    $("#dItemNo").val(itemNo);
-    $("#baseColor").combobox('select', '#FF0000');
-    $("#baseType").combobox('select', 'mouse-pointer.png');
-    $("#basePaintWidth").combobox('select', 3);
-    
-    $.each($("#canvasP0").find("canvas"), function(key, canvasP) {
-        canvasP.width = canvasWidth;
-        canvasP.height = canvasHeight;
-        if (key === 0) {
-            canvasP1.top = $(canvasP).offset().top;
-            canvasP1.left = $(canvasP).offset().left;
-        } else {
-            //$("#P2").offset({top:$("#P1").position().top,left:$("#P1").position().left});
-            $(canvasP).offset({top: canvasP1.top,
-                              left: canvasP1.left
-            });
-        }
-    });
-    
-    $("#canvasP0").css({'width': canvasWidth+4,
-        'height': canvasHeight+4,
-        'border': '3px #cccccc dashed'});
-    
-    $canvasP2 = $('#canvasP2');
-    $canvasP1 = $('#canvasP1');
-    var $offset = $canvasP2.offset();
-    
-    var itemDesc = "項目說明";
-    
-    for (var item = 0; item < 2; item++)
-    {
-        //畫點
-        var drawPointX = baseX;
-        var drawPointY;
-        var diffH;
-        if (item == 0)
-            drawPointY = baseY;
-        else
-            drawPointY += baseH + diffH;
-
-        diffH = 0;
-        var iniText;
-        if (item === 0)
-            iniText = itemDesc;
-        else
-            iniText = itemValue;
-
-        //項目文字
-        var param = {
-            fillStyle: '#000',
-            strokeWidth: 1,
-            x: drawPointX + wordPadding.top, y: drawPointY + wordPadding.left,
-            fontSize: fontsize,
-            fontFamily: 'Trebuchet MS, sans-serif',
-            maxWidth: iDescW - wordPadding.left - wordPadding.right,
-            fromCenter: false,
-            align: 'left',
-            text: iniText
-        };
-
-        var iDescParams = $canvasP1.measureText(param);
-        $canvasP1.drawText(param);
-
-        if (iDescParams.height + wordPadding.top + wordPadding.bottom > baseH)
-            diffH = iDescParams.height + wordPadding.top + wordPadding.bottom - baseH;
-
-        $canvasP1.drawRect({
-            strokeStyle: 'black',
-            strokeWidth: 1,
-            x: drawPointX, y: drawPointY,
-            fromCenter: false,
-            width: iDescW,
-            height: baseH + diffH
-        });
-
-        drawPointX += iDescW;
-        for (var cnt = 0; cnt < optCnt; cnt++)
-        {
-        	var optText;
-	        if (item === 0)
-	        	optText = opt[optClass][cnt].optDesc;
-	        else
-	        	optText = '';
-        	//選項文字
-            var param = {
-                fillStyle: '#000',
-                strokeWidth: 1,
-                x: drawPointX + wordPadding.top, y: drawPointY + wordPadding.left,
-                fontSize: fontsize,
-                fontFamily: 'Trebuchet MS, sans-serif',
-                maxWidth: iDescW - wordPadding.left - wordPadding.right,
-                fromCenter: false,
-                align: 'left',
-                text: optText
-            };
-            $canvasP1.drawText(param);
-        	
-            $canvasP1.drawRect({
-                strokeStyle: 'black',
-                strokeWidth: 1,
-                x: drawPointX, y: drawPointY,
-                fromCenter: false,
-                width: optW,
-                height: baseH + diffH
-            });
-            drawPointX += optW;
-        }
-
+function loadCanvas(reload) {
+    if (!reload) {
+	    $.each($("#canvasP0").find("canvas"), function(key, canvasP) {
+	        canvasP.width = canvasWidth;
+	        canvasP.height = canvasHeight;
+	        if (key === 0) {
+	            canvasP1.top = $(canvasP).offset().top;
+	            canvasP1.left = $(canvasP).offset().left;
+	        } else {
+	            $(canvasP).offset({
+	                top: canvasP1.top,
+	                left: canvasP1.left
+	            });
+	        }
+	    });
+	    
+	    $("#canvasP0").css({'width': canvasWidth+4,
+	        'height': canvasHeight+4,
+	        'border': '3px #cccccc dashed'});
+	    $canvasP2 = $('#canvasP2');
+	    $canvasP1 = $('#canvasP1');
     }
+    $offset = $canvasP2.offset();
     
     var hastouch = "ontouchstart" in window ? true : false;
     if (hastouch) {
@@ -396,12 +316,10 @@ function editPic(optClass, itemNo, itemValue, url) {
         });
 
     } else {
-        //On mousedown the painting functionality kicks in
         $canvasP2.on('mousedown', function(e) {
             isMouseDown = true;
         });
 
-        //On mouseup the painting functionality stops
         $canvasP2.on('mouseup', function() {
             isMouseDown = false;
             return;
@@ -409,13 +327,8 @@ function editPic(optClass, itemNo, itemValue, url) {
     }
 
     $canvasP2.on('mousemove', function(e) {
-
         lastPos.x = pos.x;
         lastPos.y = pos.y;
-        /*
-        $("#xy1").val("e.pageX = " + e.pageX);
-        $("#xy2").val("e.pagey = " + e.pageY);
-        */
         pos.x = e.pageX - $offset.left;
         pos.y = e.pageY - $offset.top;
         if (lastPos.x === 0 && lastPos.y === 0) {
@@ -424,18 +337,253 @@ function editPic(optClass, itemNo, itemValue, url) {
         }
 
         if (isMouseDown) {
-        /*
-            $("#xy1").val("x1 = " + lastPos.x + ",y1 = " + lastPos.y);
-            $("#xy2").val("x2 = " + pos.x + ",y2 = " + pos.y);*/
             if (paintType === 'pen')
                 paintLine(lastPos.x, lastPos.y, pos.x, pos.y);
             else if (paintType === 'eraser')
                 clearLine(lastPos.x, lastPos.y, pos.x, pos.y);
         }
     });
-    if (url) {
-        $canvasP2.drawImage({
-        	source: url
+}
+
+function editPic(target) {
+    $("#edPic").dialog("open");
+    $("#baseColor").combobox('select', '#FF0000');
+    $("#baseType").combobox('select', 'mouse-pointer.png');
+    $("#basePaintWidth").combobox('select', 3);
+    
+	loadCanvas();
+	var arg = {};
+    if (target != null && target != '') {
+        //項目輸入
+    	arg = $("#itemList").datagrid('getRows')[getRowIndex(target)];
+    	$("#dItemNo").val(arg.itemNo);
+    	var itemDesc = "項目說明";
+    	
+    	for (var item = 0; item < 2; item++)
+        {
+            //設定起始座標
+            var drawPointX = baseX;
+            var drawPointY;
+            var diffH;
+            if (item == 0)
+                drawPointY = baseY;
+            else
+                drawPointY += baseH + diffH;
+
+            diffH = 0;
+            var iniText;
+            if (item === 0)
+                iniText = itemDesc;
+            else
+                iniText = arg.itemDesc;
+
+            //項目文字
+            var param = {
+                fillStyle: '#000',
+                strokeWidth: 1,
+                x: drawPointX + wordPadding.top, y: drawPointY + wordPadding.left,
+                fontSize: fontsize,
+                fontFamily: 'Trebuchet MS, sans-serif',
+                maxWidth: iDescW - wordPadding.left - wordPadding.right,
+                fromCenter: false,
+                align: 'left',
+                text: iniText
+            };
+
+            var iDescParams = $canvasP1.measureText(param);
+            $canvasP1.drawText(param);
+
+            if (iDescParams.height + wordPadding.top + wordPadding.bottom > baseH)
+                diffH = iDescParams.height + wordPadding.top + wordPadding.bottom - baseH; //因為有可能字太多所以要拉大框
+			
+            //項目的框
+            $canvasP1.drawRect({
+                strokeStyle: 'black',
+                strokeWidth: 1,
+                x: drawPointX, y: drawPointY,
+                fromCenter: false,
+                width: iDescW,
+                height: baseH + diffH
+            });
+
+            drawPointX += iDescW;
+            //顯示opt類別
+            for (var cnt = 0; cnt < opt[arg.optClass].length; cnt++)
+            {
+            	var optText;
+    	        if (item === 0)
+    	        	optText = opt[arg.optClass][cnt].optDesc;
+    	        else {
+    	            if (opt[arg.optClass][cnt].noSel != 'Y')
+    	        		optText = opt[arg.optClass][cnt].optId;
+    	            else
+    	                optText = '';
+    	        }
+            	//opt類別文字
+                var param = {
+                    fillStyle: '#000',
+                    strokeWidth: 1,
+                    x: drawPointX + wordPadding.top, y: drawPointY + wordPadding.left,
+                    fontSize: fontsize,
+                    fontFamily: 'Trebuchet MS, sans-serif',
+                    maxWidth: optW - wordPadding.left - wordPadding.right,
+                    fromCenter: false,
+                    align: 'center',
+                    text: optText
+                };
+                $canvasP1.drawText(param);
+                
+                //如果有分數就畫個圈
+                if (arg.optId === opt[arg.optClass][cnt].optId && item !== 0) {
+                    var p = $canvasP1.measureText(param);
+    	            $canvasP1.drawArc({
+    	                layer: true,
+    	                strokeStyle: 'red',
+    	                strokeWidth: 3,
+    	                x: drawPointX + (p.width/2), y: drawPointY + (p.height/2),
+    	                fromCenter: false,
+    	                radius: p.width
+    	            });
+                }
+            	
+                //opt類別的框
+                $canvasP1.drawRect({
+                    strokeStyle: 'black',
+                    strokeWidth: 1,
+                    x: drawPointX, y: drawPointY,
+                    fromCenter: false,
+                    width: optW,
+                    height: baseH + diffH
+                });
+                            
+                drawPointX += optW;
+            }
+        }
+    }
+    else {
+        //主題輸入
+        var totOptClassList = $("#optId").combobox('getData');
+        arg.examPic = '';//$("#examineeText").combogrid('get');
+        var p = {};
+        var drawPointX = baseX;
+        var drawPointY = baseY;
+        fontsize = 15;
+        var param = {
+            fillStyle: '#000',
+            strokeWidth: 1,
+            x: drawPointX, y: drawPointY,
+            fontSize: fontsize,
+            fontFamily: 'Trebuchet MS, sans-serif',
+            //maxWidth: optW - wordPadding.left - wordPadding.right,
+            fromCenter: false,
+            align: 'center',
+            text: '評分結果:'
+        };
+        p = $canvasP1.measureText(param);
+        $canvasP1.drawText(param);
+        drawPointX += p.width + 10;
+        //PASS
+        var r = $("#resList").val().replace(/\'/g, '"');
+        var resList = JSON.parse(r)['resList'];
+        for (var o = 0; o < resList.length; o++) {
+            //前面要畫方框，跟字等高
+            $canvasP1.drawRect({
+                strokeStyle: '#000',
+                strokeWidth: 1,
+                x: drawPointX, y: drawPointY,
+                fromCenter: false,
+                width: fontsize,
+                height: fontsize
+            });			
+            
+            var p1 = {'x':0, 'y':0};
+            var p2 = p1;
+            var p3 = p1;
+            
+            p1.x = fontsize*Math.cos(15);
+            
+            if ($("#optId").textbox('getValue') === resList[o].value) {
+                //打勾
+                
+                $('canvas').drawLine({
+                    strokeStyle: 'red',
+                    strokeWidth: 3,
+                    x1: p1.x, y1: p1.y,
+                    x2: p2.x, y2: p2.y,
+                    x3: p3.x, y3: p3.y
+                  });
+            }
+            drawPointX += fontsize + 3;
+            
+            optText = resList[o].text;
+            var param = {
+                fillStyle: '#000',
+                strokeWidth: 1,
+                x: drawPointX, y: drawPointY,
+                fontSize: fontsize,
+                fontFamily: 'Trebuchet MS, sans-serif',
+                //maxWidth: optW - wordPadding.left - wordPadding.right,
+                fromCenter: false,
+                align: 'center',
+                text: optText
+            };
+            p = $canvasP1.measureText(param);
+            $canvasP1.drawText(param);
+            
+            drawPointX += p.width + 10;
+        }
+        
+        drawPointX += 10
+        
+        //整體級分
+        for (var o = 0; o < totOptClassList.length; o++) {
+                        
+            optText = totOptClassList[o].optDesc;
+            var param = {
+                fillStyle: '#000',
+                strokeWidth: 1,
+                x: drawPointX, y: drawPointY,
+                fontSize: fontsize,
+                fontFamily: 'Trebuchet MS, sans-serif',
+                //maxWidth: optW - wordPadding.left - wordPadding.right,
+                fromCenter: false,
+                align: 'center',
+                text: optText
+            };
+            p = $canvasP1.measureText(param);
+            $canvasP1.drawText(param);
+            
+            if ($("#optId").combobox('getValue') === totOptClassList[o].optId) {
+                $canvasP1.drawArc({
+	                layer: true,
+	                strokeStyle: 'red',
+	                strokeWidth: 3,
+	                x: drawPointX + 0, y: drawPointY - (p.height/2),
+	                fromCenter: false,
+	                radius: p.width/2
+	            });
+            }
+            drawPointX += p.width + 10;
+        }
+    }    
+    
+    //下載上次存檔的圖
+    if (arg.examPic) {
+        $.ajax({
+            type: 'POST',
+            url: 'ScSetScore_getPic',
+            data: {'examPic':arg.examPic},
+            dataType: 'json',
+            success: function(res){
+            	parent.showStatus(res);
+                if (res.success) {
+                    $canvasP2.drawImage({
+                    	source: 'data:image/png;base64,' + res.imageBase64,
+                    	x: 0, y: 0,
+                    	fromCenter: false
+                    });
+                }
+            }        
         });
     }
 }
@@ -459,7 +607,12 @@ function out() {
         success: function(res){
         	parent.showStatus(res);
             if (res.success) {
-            
+                $("#itemList").datagrid('updateRow', {
+                    index: $("#dItemNo").val() - 1,
+                    row: {
+                        examPic: res.examPic
+                    }
+                });
             }
         }
 	});
@@ -487,7 +640,7 @@ function scoreEditDone() {
         item.optClass = rows[i].optClass;
         item.optId = $('input[name=optIdRadio'+i+']:checked').val();
         item.examComm = "";
-        item.examPic = "";
+        //item.examPic = "";
         itemList[i] = item;
     }
     
@@ -589,8 +742,19 @@ function backProgId(bProgId) {
         </table>
     </div>
 </div>
-<div id="edPic" class="easyui-dialog" style="width: 900px; height: 500px; display: none;"
-    data-options="modal: true, title: '編輯考官塗鴉', closed: true">
+<div id="edPic" class="easyui-dialog" style="width: 900px; height: 500px; display: none; overflow:hidden;"
+    data-options="modal: true,
+                  title: '編輯考官塗鴉', 
+                  closed: true,
+                  onClose : function() {
+                      parent.document.body.style.overflow = 'auto';
+                  },
+                  onMove: function() {
+                      if ($canvasP2 != null) {
+                          $offset = $canvasP2.offset();
+                          loadCanvas(true);
+                      }
+                  }">
     <input id="dItemNo" type="hidden"/>
     <table>
         <tr>
@@ -611,9 +775,10 @@ function backProgId(bProgId) {
                     <input id="baseColor" class="easyui-combobox" style="width:80px;"/>
                     <input id="baseType" class="easyui-combobox" style="width:80px;"/>
                     <input id="basePaintWidth" class="easyui-combobox" style="width:80px;"/>
+                    <button onclick="$canvasP2.clearCanvas()">清除</button>
                     <input type="input" id="xy1" style="width:90px"/>
                     <input type="input" id="xy2" style="width:90px"/>
-                    <button onclick="out()">輸出</button>
+                    <button onclick="out()">存檔</button>
                 </div>
             </td>
         </tr>
@@ -641,6 +806,7 @@ function backProgId(bProgId) {
 <input type="hidden" id="queryHide"  value="${queryHide}" />
 <input type="hidden" id="status"     value="${status}" />
 <input type="hidden" id="statusTime" value="${statusTime}" />
+<input type="hidden" id="resList" value="${resList}" />
 <!-- 應該不是這樣做 
 <input type="hidden" id="bProgId"    value="${bProgId}" />
 <input type="hidden" id="bRdId"      value="${bRdId}" />
@@ -700,6 +866,10 @@ $(function(){
             return '<img class="item-img" src="'+imageFile+'"/><span class="item-text">'+row.text+'</span>';
         },
         onSelect: function(rec) {
+            if (rec.text === 'pen')
+            	parent.document.body.style.overflow = "hidden";
+            else
+                parent.document.body.style.overflow = "auto";
             var r = $(this).next().find("input.textbox-text")[0];
             var i = $(this).next().find("img")[0];
             $(i).remove();
@@ -736,6 +906,7 @@ $(function(){
             paintWidth=rec.value;
         }
     });
+    
 });
     
 //canvas 的基本值
@@ -755,7 +926,7 @@ var canvasP1 = {
 var paintWidth = 3; //預設畫筆寬度
 var paintColor = '#FF0000'; //預設畫筆顏色
 var paintType = 'pen'; //預設游標 eraser pen
-var canvasWidth = 800;
+var canvasWidth = 850;
 var canvasHeight = 350;
 
 var fontsize = 20;
@@ -770,8 +941,7 @@ var baseY = 30;
 var baseH = 80;
 
 //答案選項長度
-var optW = 100;
-var optCnt = 3; //級分數量
+var optW = 80;
 
 //文字內距
 var wordPadding = {
@@ -788,56 +958,61 @@ var wordPointY = 0;
 //用jCanvas的方式畫圖
 var $canvasP2;
 var $canvasP1;
+//目標圖的位置
+var $offset;
 
 //畫圖的功能
-    function clearLine(x1, y1, x2, y2) {
-        var radius = paintWidth / 2;
+function clearLine(x1, y1, x2, y2) {
+    var radius = paintWidth / 2;
 
+    $canvasP2.clearCanvas({
+        x: x1, y: y1,
+        radius: radius
+    });
+
+    var asin = radius*Math.sin(Math.atan((y2-y1)/(x2-x1)));
+    var acos = radius*Math.cos(Math.atan((y2-y1)/(x2-x1)))
+    var x3 = x1+asin;
+    var y3 = y1-acos;
+    var x4 = x1-asin;
+    var y4 = y1+acos;
+    var x5 = x2+asin;
+    var y5 = y2-acos;
+    var x6 = x2-asin;
+    var y6 = y2+acos;
+
+    $("#xy1").val("x1:"+ x1);
+    $("#xy2").val("y1:"+ y1);
+
+    $canvasP2.clearCanvas({
+        x: x2, y: y2,
+        radius: radius
+    });
+
+    if (x3 + y3 + x4 + y4 + x5 + y5 + x6 + y6 > 0)
         $canvasP2.clearCanvas({
-            x: x1, y: y1,
-            radius: radius
+            x3: x3, y3: y3,
+            x4: x4, y4: y4,
+            x5: x5, y5: y5,
+            x6: x6, y6: y6
         });
+}
 
-        var asin = radius*Math.sin(Math.atan((y2-y1)/(x2-x1)));
-        var acos = radius*Math.cos(Math.atan((y2-y1)/(x2-x1)))
-        var x3 = x1+asin;
-        var y3 = y1-acos;
-        var x4 = x1-asin;
-        var y4 = y1+acos;
-        var x5 = x2+asin;
-        var y5 = y2-acos;
-        var x6 = x2-asin;
-        var y6 = y2+acos;
-
-        $("#xy1").val(x3 +":"+ y3);
-        $("#xy2").val(x4 +":"+ y4);
-
-        $canvasP2.clearCanvas({
-            x: x2, y: y2,
-            radius: radius
-        });
-
-        if (x3 + y3 + x4 + y4 + x5 + y5 + x6 + y6 > 0)
-            $canvasP2.clearCanvas({
-                x3: x3, y3: y3,
-                x4: x4, y4: y4,
-                x5: x5, y5: y5,
-                x6: x6, y6: y6
-            });
-    }
-
-    function paintLine(x1, y1, x2, y2) {
-        $canvasP2.drawLine({
-            strokeStyle: paintColor,
-            strokeWidth: paintWidth,
-            rounded: true,
-            strokeJoin: 'round',
-            strokeCap: 'round',
-            x1: x1,
-            y1: y1,
-            x2: x2,
-            y2: y2
-        });
-    }
+function paintLine(x1, y1, x2, y2) {
+    $("#xy1").val("x1:"+ x1);
+    $("#xy2").val("y1:"+ y1);
+    
+    $canvasP2.drawLine({
+        strokeStyle: paintColor,
+        strokeWidth: paintWidth,
+        rounded: true,
+        strokeJoin: 'round',
+        strokeCap: 'round',
+        x1: x1,
+        y1: y1,
+        x2: x2,
+        y2: y2
+    });
+}
 </script>
 </html>
