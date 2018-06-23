@@ -291,11 +291,11 @@ public class ScSetScoreAction {
                 ex.put("fExaminee", rsEx.getString("examinee"));
                 ex.put("fExamineeName", rsEx.getString("examineeName"));
                 ex.put("fRoomSeq",  rsEx.getString("room_seq"));
-                ex.put("fscore",  rsEx.getString("score"));
-                ex.put("fresult",  rsEx.getString("result"));
-                ex.put("foptId",  rsEx.getString("opt_id"));
-                ex.put("fexamComm",  rsEx.getString("exam_comm"));
-                ex.put("fexamPic",  rsEx.getString("exam_pic"));
+                ex.put("fScore",  rsEx.getString("score"));
+                ex.put("fResult",  rsEx.getString("result"));
+                ex.put("fOptId",  rsEx.getString("opt_id"));
+                ex.put("fExamComm",  rsEx.getString("exam_comm"));
+                ex.put("fExamPic",  rsEx.getString("exam_pic"));
                 exList.add(ex);
             }
             rsEx.close();
@@ -387,7 +387,7 @@ public class ScSetScoreAction {
         //String optClass = req.get("optClass").substring(0, 2);
         
         StringBuffer sqlQryOpt = new StringBuffer(
-                  " SELECT opt_class \"optClass\", opt_id \"optId\", opt_desc \"optDesc\", no_sel \"noSel\" \n"
+                  " SELECT opt_class \"optClass\", opt_id \"optId\", opt_desc \"optDesc\", no_sel \"noSel\", score \n"
                 + "   FROM scoptm \n"
                 + "  WHERE opt_class like ? || '%' \n"
                 + "    AND opt_id <> '-' \n"
@@ -433,11 +433,18 @@ public class ScSetScoreAction {
                   + "  FROM scqstm "
                   + " WHERE qs_id = ?");
             
+            String sqlQryQst = 
+                    "SELECT total_score \"totalScore\", pass_score \"passScore\", borderline "
+                  + "  FROM scqstm "
+                  + " WHERE qs_id = ?";
             String totalOptClass = dbu.selectStringList(sqlQryTotalOptClass.toString(), qryQsId);
             
             ScMntMastAction scMntMast = new ScMntMastAction();
             List<Map<String, Object>> totOptClassList = scMntMast.qryOptClassList(totalOptClass, dbu);
             res.put("totOptClassList", totOptClassList);
+            
+            Map<String, Object> qst = dbu.selectMapRowList(sqlQryQst, qryQsId);
+            res.put("qst", qst);
             
             // 整體
             StringBuffer sqlQryTot = new StringBuffer(
@@ -493,6 +500,7 @@ public class ScSetScoreAction {
             String qsId = req.get("qsId");
             int sectSeq = (req.get("sectSeq") != null) ? Integer.parseInt(req.get("sectSeq")) : 0;
             int roomSeq = (req.get("roomSeq") != null) ? Integer.parseInt(req.get("roomSeq")) : 0;
+            String examCommT = (req.get("examComm") != null) ? req.get("examComm") : "";
             String itemList = (req.get("itemList") != null) ? req.get("itemList") : "";
             int score = 0;
             String result = "FAI";
@@ -531,6 +539,7 @@ public class ScSetScoreAction {
                   + "    SET score    = ? \n"
                   + "      , result   = ? \n"
                   + "      , opt_id   = ? \n"
+                  + "      , exam_comm   = ? \n"
                   + "  WHERE rd_id    = ? \n"
                   + "    AND room_seq = ? \n"
                   + "    AND sect_seq = ? \n";
@@ -559,7 +568,7 @@ public class ScSetScoreAction {
             else if (score < borderline)
                 result = "FAI";
             String optId = req.get("optId");
-            dbu.executeList(sqlUpQsmstr, score, result, optId, rdId, roomSeq, sectSeq);
+            dbu.executeList(sqlUpQsmstr, score, result, optId, examCommT, rdId, roomSeq, sectSeq);
             dbu.doCommit();
             
             res.put("score",  score);
@@ -609,7 +618,9 @@ public class ScSetScoreAction {
             String qsId = req.get("qsId");
             int roomSeq = Integer.parseInt(req.get("roomSeq")+"");
             int sectSeq = Integer.parseInt(req.get("sectSeq")+"");
-            int itemNo = Integer.parseInt(req.get("itemNo")+"");
+            int itemNo = 0;
+            if (req.get("type").equals("I"))
+                itemNo = Integer.parseInt(req.get("itemNo")+"");
             String fileName = rdId + "_" + qsId + "_" + sectSeq + "_" + itemNo;
             File outputfile = new File(uploadPath + fileName + ".png");
             @SuppressWarnings("restriction")
@@ -617,16 +628,28 @@ public class ScSetScoreAction {
             BufferedImage image = ImageIO.read(new ByteArrayInputStream(imageBytes));
             ImageIO.write(image, "png", outputfile);
             
-            String sqlUpExamPic =
-                    " UPDATE scscom  \n"
-                  + "    SET exam_pic = ? \n"
-                  + "  WHERE rd_id    = ? \n"
-                  + "    AND room_seq = ? \n"
-                  + "    AND sect_seq = ? \n"
-                  + "    AND item_no = ? \n";
-            dbu.executeList(sqlUpExamPic, fileName + ".png", rdId, roomSeq, sectSeq, itemNo);
+            String sqlUpExamPic;
+            if (req.get("type").equals('I')) {
+                sqlUpExamPic =
+                        " UPDATE scscom  \n"
+                      + "    SET exam_pic = ? \n"
+                      + "  WHERE rd_id    = ? \n"
+                      + "    AND room_seq = ? \n"
+                      + "    AND sect_seq = ? \n"
+                      + "    AND item_no = ? \n";
+                dbu.executeList(sqlUpExamPic, fileName + ".png", rdId, roomSeq, sectSeq, itemNo);
+            } else {
+                sqlUpExamPic =
+                        " UPDATE scrddm  \n"
+                      + "    SET exam_pic = ? \n"
+                      + "  WHERE rd_id    = ? \n"
+                      + "    AND room_seq = ? \n"
+                      + "    AND sect_seq = ? \n";
+                dbu.executeList(sqlUpExamPic, fileName + ".png", rdId, roomSeq, sectSeq);
+            }
             dbu.doCommit();
             res.put("examPic", fileName + ".png");
+            res.put("type", req.get("type"));
             res.put("status", "圖檔儲存完成");
             res.put("success", true);
         }
@@ -642,7 +665,7 @@ public class ScSetScoreAction {
     }
     
     /**
-     * 讀取手寫輸入圖檔
+     * 讀取手寫輸入圖檔轉Base64
      * @param req
      * @return
      */

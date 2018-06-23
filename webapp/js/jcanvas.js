@@ -2481,7 +2481,7 @@ $.fn.clearCanvas = function clearCanvas(args) {
 	for (e = 0; e < $canvases.length; e += 1) {
 		ctx = _getContext($canvases[e]);
 		if (ctx) {
-
+			/*
             if (params.radius > 0 && params.x > 0 && params.y > 0) {
                 ctx.save();
                 ctx.beginPath();
@@ -2499,7 +2499,8 @@ $.fn.clearCanvas = function clearCanvas(args) {
                 ctx.clip();
                 ctx.clearRect(0, 0, $canvases[e].width, $canvases[e].height);
     			ctx.restore();
-			} else if (params.width === null || params.height === null) {
+			} else */ 
+			if (params.width === null || params.height === null) {
 				// Clear entire canvas if width/height is not given
 
     			// Reset current transformation temporarily to ensure that the entire canvas is cleared
