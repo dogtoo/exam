@@ -282,6 +282,7 @@ function delOptClass(src) {
 function edatagridAct(src){
 	var act = src==1 ? 'saveRow' : src==2 ? 'cancelRow' : 'destroyRow' ;
 	$('#optDList').edatagrid(act);
+	$('#optDList').datagrid('enableDnd');
 }
 
 function optDListFmt(value, row, index) {
@@ -474,7 +475,10 @@ function saveOptItem(){
 					title:'刪除項目確認',
 					msg:'確定要刪除這一個評分項目嗎？'
 				}
-				}
+			},
+			onEdit:function() {
+				$(this).datagrid('enableDnd', -1);			
+			}
         	">
 		    <thead>
 		        <tr>

@@ -305,7 +305,7 @@ public class ScRunDownAction {
             sqlRdrm +=
                  "     , a.examinee \n"
                + "     , (select user_name from mbdetl where user_id = a.examinee) \"examineeName\" \n "
-               + "     , a.score, a.result, a.opt_id optId, a.exam_comm examComm, a.exam_pic examPic \n";
+               + "     , a.score, a.result, a.opt_id optId, a.exam_comm \"examComm\", a.exam_pic \"examPic\" \n";
         }
         sqlRdrm +=
                  "     , (select room_name from EXROOM where room_id = a.room_id ) \"roomName\" \n"

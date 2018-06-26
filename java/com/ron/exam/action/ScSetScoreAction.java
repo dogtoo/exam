@@ -558,7 +558,7 @@ public class ScSetScoreAction {
                 
                 score += dbu.selectIntList(sqlQryOpt, optClass, optId);
                 
-                String examComm = sco.getString("examComm");
+                String examComm = (!sco.isNull("examComm")) ? sco.getString("examComm") : "";
                 dbu.executeList(sqlInsSco, rdId, roomSeq, sectSeq, itemNo, optClass, optId, examComm);
             }
             if (score <= totalScore && score >= passScore)
@@ -616,10 +616,11 @@ public class ScSetScoreAction {
             }
             String rdId = req.get("rdId");
             String qsId = req.get("qsId");
+            String type = req.get("type");
             int roomSeq = Integer.parseInt(req.get("roomSeq")+"");
             int sectSeq = Integer.parseInt(req.get("sectSeq")+"");
             int itemNo = 0;
-            if (req.get("type").equals("I"))
+            if (type.equals("I"))
                 itemNo = Integer.parseInt(req.get("itemNo")+"");
             String fileName = rdId + "_" + qsId + "_" + sectSeq + "_" + itemNo;
             File outputfile = new File(uploadPath + fileName + ".png");
@@ -629,7 +630,8 @@ public class ScSetScoreAction {
             ImageIO.write(image, "png", outputfile);
             
             String sqlUpExamPic;
-            if (req.get("type").equals('I')) {
+            int i = 0;
+            if (type.equals("I")) {
                 sqlUpExamPic =
                         " UPDATE scscom  \n"
                       + "    SET exam_pic = ? \n"
@@ -637,7 +639,7 @@ public class ScSetScoreAction {
                       + "    AND room_seq = ? \n"
                       + "    AND sect_seq = ? \n"
                       + "    AND item_no = ? \n";
-                dbu.executeList(sqlUpExamPic, fileName + ".png", rdId, roomSeq, sectSeq, itemNo);
+                i = dbu.executeList(sqlUpExamPic, fileName + ".png", rdId, roomSeq, sectSeq, itemNo);
             } else {
                 sqlUpExamPic =
                         " UPDATE scrddm  \n"
@@ -647,9 +649,10 @@ public class ScSetScoreAction {
                       + "    AND sect_seq = ? \n";
                 dbu.executeList(sqlUpExamPic, fileName + ".png", rdId, roomSeq, sectSeq);
             }
+            System.out.println(i);
             dbu.doCommit();
             res.put("examPic", fileName + ".png");
-            res.put("type", req.get("type"));
+            res.put("type", type);
             res.put("status", "圖檔儲存完成");
             res.put("success", true);
         }

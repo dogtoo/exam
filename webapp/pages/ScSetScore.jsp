@@ -746,14 +746,15 @@ function out(type) {
 	                    }
 	                });
             	} else {
-            		var s = $("#sectSeq").val();
             		var i = $("#examineeText").combogrid('grid').datagrid('getRowIndex', $("#sectSeq").val());
-            		$("#examineeText").combogrid('grid').datagrid('updateRow', {
-                        index: $("#examineeText").combogrid('grid').datagrid('getRowIndex', $("#sectSeq").val()),
-                        row: {
-                            fExamPic: res.examPic
-                        }
-                    });
+            		if (i > 0) {
+	            		$("#examineeText").combogrid('grid').datagrid('updateRow', {
+	                        index: $("#examineeText").combogrid('grid').datagrid('getRowIndex', $("#sectSeq").val()),
+	                        row: {
+	                            fExamPic: res.examPic
+	                        }
+	                    });
+            		}
             		$("#examPic").val(res.examPic);
             	}
             }
