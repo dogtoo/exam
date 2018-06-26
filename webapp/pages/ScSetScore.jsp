@@ -316,6 +316,7 @@ function editComm(target) {
     var arg = {};
     if (target != null && target != '') {
     	var idx = getRowIndex(target);
+    	$("#edCommDone").unbind('click');
         $("#edCommDone").bind('click', idx, function() {
         	$("#itemList").datagrid('updateRow', {
                     index: idx,
@@ -328,6 +329,7 @@ function editComm(target) {
         //項目輸入
         arg = $("#itemList").datagrid('getRows')[idx];
     } else {
+    	$("#edCommDone").unbind('click');
     	$("#edCommDone").bind('click', function() {
     		var t = $("#examCommT").textbox('getText');
     		$("#examComm").val(t);
@@ -429,6 +431,7 @@ function editPic(target) {
 	loadCanvas();
 	var arg = {};
     if (target != null && target != '') {
+    	$("#out").unbind('click');
     	$("#out").bind('click', function() {
     		out('I');
     	});    	
@@ -540,6 +543,7 @@ function editPic(target) {
         }
     }
     else {
+    	$("#out").unbind('click');
     	$("#out").bind('click', function() {
             out('T');
         });
@@ -757,6 +761,7 @@ function out(type) {
             		}
             		$("#examPic").val(res.examPic);
             	}
+            	$("#edPic").dialog("close");
             }
         }
 	});

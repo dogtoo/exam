@@ -649,7 +649,6 @@ public class ScSetScoreAction {
                       + "    AND sect_seq = ? \n";
                 dbu.executeList(sqlUpExamPic, fileName + ".png", rdId, roomSeq, sectSeq);
             }
-            System.out.println(i);
             dbu.doCommit();
             res.put("examPic", fileName + ".png");
             res.put("type", type);
