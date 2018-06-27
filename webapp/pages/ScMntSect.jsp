@@ -255,10 +255,15 @@ function editRdRoom(){
 	    sectSeq = cell.index + 1;
     }
     
-    $("#pExaminer").combobox({
-        valueField:'examiner',
+    $("#pExaminer").combogrid({
+    	panelWidth:300,
+    	idField:'examiner',
         textField:'examinerName',
         mode: 'remote',
+        columns:[[
+            {field:'examiner',title:'考官代碼',width:140},
+            {field:'examinerName',title:'考官名稱',width:140}
+        ]],
         loader: function(param,success,error){
             data = {'param': param.q, 'examiner': 'Y'};
             $.ajax({
@@ -270,7 +275,7 @@ function editRdRoom(){
                     if (res.success)
                         success(res.userList);
                     else
-                        return false;
+                    	success([]);
                     $("#examiner").val('');
                 }
             });
@@ -571,7 +576,7 @@ function rddmEditDone() {
 	            <tr class="modPane">
 	                <td>考官</td>
 	                <td>
-	                    <input id="pExaminer" class="easyui-combobox" style="width: 100px;"/>
+	                    <input id="pExaminer" class="easyui-combogrid" style="width: 100px;"/>
 	                    <input type="hidden" id="examiner"/>
 	                </td>
 	            </tr>
